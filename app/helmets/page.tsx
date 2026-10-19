@@ -336,42 +336,7 @@ function getExpandedRequirement(
 }
 
 /* =========================================================
-   IN-GAME HELMET RANK COLOURS
-
-   SPACE HELMET
-
-   1:
-   first ❉ = #AAAAAA
-   remaining = white
-
-   5:
-   all #AAAAAA
-
-   6:
-   first ❉ = #555555
-   remaining = #AAAAAA
-
-   10:
-   all #555555
-
-   11:
-   first ❉ = #000000
-   remaining = #555555
-
-   15:
-   all #000000
-
-   SUNSUIT
-
-   Base:
-   all white
-
-   1:
-   first ❉ = #FF5555
-   remaining = white
-
-   5:
-   all #FF5555
+   HELMET RANK COLOURS
    ========================================================= */
 
 function getHelmetRankColors(
@@ -1158,57 +1123,61 @@ export default function HelmetsPage() {
           }
         >
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="overflow-x-auto pb-2">
 
-            {groupedHelmets.space.map(
-              (
-                upgrade
-              ) => {
+            <div className="grid min-w-[1250px] grid-cols-5 gap-4">
 
-                const index =
-                  getHelmetIndex(
-                    upgrade.id
-                  );
+              {groupedHelmets.space.map(
+                (
+                  upgrade
+                ) => {
 
-                const obtained =
-                  completedSet.has(
-                    upgrade.id
-                  );
-
-                const isNext =
-                  index ===
-                  highestCompletedIndex +
-                    1;
-
-                return (
-
-                  <HelmetCard
-                    key={
+                  const index =
+                    getHelmetIndex(
                       upgrade.id
-                    }
+                    );
 
-                    upgrade={
-                      upgrade
-                    }
+                  const obtained =
+                    completedSet.has(
+                      upgrade.id
+                    );
 
-                    obtained={
-                      obtained
-                    }
+                  const isNext =
+                    index ===
+                    highestCompletedIndex +
+                      1;
 
-                    isNext={
-                      isNext
-                    }
+                  return (
 
-                    onToggle={() =>
-                      toggleUpgrade(
+                    <HelmetCard
+                      key={
                         upgrade.id
-                      )
-                    }
-                  />
+                      }
 
-                );
-              }
-            )}
+                      upgrade={
+                        upgrade
+                      }
+
+                      obtained={
+                        obtained
+                      }
+
+                      isNext={
+                        isNext
+                      }
+
+                      onToggle={() =>
+                        toggleUpgrade(
+                          upgrade.id
+                        )
+                      }
+                    />
+
+                  );
+                }
+              )}
+
+            </div>
 
           </div>
 
@@ -1237,57 +1206,61 @@ export default function HelmetsPage() {
           }
         >
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="overflow-x-auto pb-2">
 
-            {groupedHelmets.sun.map(
-              (
-                upgrade
-              ) => {
+            <div className="grid min-w-[1500px] grid-cols-6 gap-4">
 
-                const index =
-                  getHelmetIndex(
-                    upgrade.id
-                  );
+              {groupedHelmets.sun.map(
+                (
+                  upgrade
+                ) => {
 
-                const obtained =
-                  completedSet.has(
-                    upgrade.id
-                  );
-
-                const isNext =
-                  index ===
-                  highestCompletedIndex +
-                    1;
-
-                return (
-
-                  <HelmetCard
-                    key={
+                  const index =
+                    getHelmetIndex(
                       upgrade.id
-                    }
+                    );
 
-                    upgrade={
-                      upgrade
-                    }
+                  const obtained =
+                    completedSet.has(
+                      upgrade.id
+                    );
 
-                    obtained={
-                      obtained
-                    }
+                  const isNext =
+                    index ===
+                    highestCompletedIndex +
+                      1;
 
-                    isNext={
-                      isNext
-                    }
+                  return (
 
-                    onToggle={() =>
-                      toggleUpgrade(
+                    <HelmetCard
+                      key={
                         upgrade.id
-                      )
-                    }
-                  />
+                      }
 
-                );
-              }
-            )}
+                      upgrade={
+                        upgrade
+                      }
+
+                      obtained={
+                        obtained
+                      }
+
+                      isNext={
+                        isNext
+                      }
+
+                      onToggle={() =>
+                        toggleUpgrade(
+                          upgrade.id
+                        )
+                      }
+                    />
+
+                  );
+                }
+              )}
+
+            </div>
 
           </div>
 
@@ -1323,8 +1296,6 @@ export default function HelmetsPage() {
 
 /* =========================================================
    HELMET RANK
-
-   Always displays exactly five ❉ symbols.
    ========================================================= */
 
 function HelmetRank({
@@ -1482,7 +1453,7 @@ function HelmetCard({
   return (
 
     <article
-      className={`flex min-w-0 flex-col rounded-2xl border p-4 transition ${
+      className={`flex min-w-[230px] flex-col rounded-2xl border p-4 transition ${
         obtained
           ? "border-white/5 bg-black/10 opacity-55"
           : isNext
@@ -1497,7 +1468,7 @@ function HelmetCard({
 
       <div className="flex items-start justify-between gap-3">
 
-        <div className="min-w-0">
+        <div>
 
           <HelmetRank
             upgrade={
@@ -1620,15 +1591,15 @@ function RequirementDisplay({
   ) {
     return (
 
-      <div className="flex items-center justify-between gap-4 rounded-lg bg-black/10 px-3 py-2 text-sm">
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-black/10 px-3 py-2 text-xs">
 
-        <span className="min-w-0 break-words text-white/60">
+        <span className="whitespace-nowrap text-white/60">
           {getMaterialLabel(
             requirement.material
           )}
         </span>
 
-        <span className="shrink-0 font-bold">
+        <span className="shrink-0 whitespace-nowrap font-bold">
           {formatNumber(
             requirement.amount
           )}
@@ -1659,51 +1630,39 @@ function RequirementDisplay({
           )
         }
 
-        className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left transition hover:bg-white/[0.025]"
+        className="flex w-full items-center justify-between gap-2 px-3 py-3 text-left transition hover:bg-white/[0.025]"
       >
 
-        <div className="min-w-0">
-
-          <p className="break-words text-sm font-semibold text-[#e0ca84]">
-            {getMaterialLabel(
-              requirement.material
-            )}
-          </p>
-
-          {expanded.isPlasma && (
-
-            <p className="mt-1 text-[10px] text-white/35">
-              1:1 plasma conversion
-            </p>
-
+        <span className="whitespace-nowrap text-xs font-semibold text-[#e0ca84]">
+          {getMaterialLabel(
+            requirement.material
           )}
+        </span>
 
-        </div>
+        <span className="ml-auto shrink-0 whitespace-nowrap text-xs font-bold">
+          {formatNumber(
+            requirement.amount
+          )}
+        </span>
 
-        <div className="flex shrink-0 items-center gap-3">
-
-          <span className="text-sm font-bold">
-            {formatNumber(
-              requirement.amount
-            )}
-          </span>
-
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#413821] text-sm font-bold text-[#e4cc7e]">
-            {open
-              ? "−"
-              : "+"}
-          </span>
-
-        </div>
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#413821] text-sm font-bold text-[#e4cc7e]">
+          {open
+            ? "−"
+            : "+"}
+        </span>
 
       </button>
+
+      {/* ===================================================
+          EXPANDED DETAILS
+          =================================================== */}
 
       {open && (
 
         <div className="border-t border-white/5 bg-black/10 px-3 py-3">
 
           {/* =================================================
-              PLASMA SOURCE
+              PLASMA CONVERSION
               ================================================= */}
 
           {expanded.isPlasma && (
@@ -1711,16 +1670,16 @@ function RequirementDisplay({
             <div className="mb-3 rounded-lg border border-[#9b8248]/20 bg-[#332d1e] px-3 py-2">
 
               <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30">
-                Underlying Compacted Item
+                1:1 Plasma Conversion
               </p>
 
-              <div className="mt-1 flex items-center justify-between gap-3">
+              <div className="mt-2 flex items-center justify-between gap-3">
 
-                <span className="text-xs font-semibold text-[#d8c27c]">
+                <span className="whitespace-nowrap text-[11px] font-semibold text-[#d8c27c]">
                   {expanded.compactedItem.name}
                 </span>
 
-                <span className="text-xs font-bold text-[#ead690]">
+                <span className="shrink-0 whitespace-nowrap text-xs font-bold text-[#ead690]">
                   ×
                   {formatNumber(
                     expanded.amount
@@ -1749,17 +1708,17 @@ function RequirementDisplay({
                     ingredient.material
                   }
 
-                  className="flex items-center justify-between gap-3 pl-1 text-xs"
+                  className="flex items-center justify-between gap-3 text-[11px]"
                 >
 
-                  <span className="min-w-0 break-words text-white/45">
+                  <span className="whitespace-nowrap text-white/45">
                     ↳{" "}
                     {getMaterialLabel(
                       ingredient.material
                     )}
                   </span>
 
-                  <span className="shrink-0 font-semibold text-white/70">
+                  <span className="shrink-0 whitespace-nowrap font-semibold text-white/70">
                     {formatNumber(
                       ingredient.amount
                     )}
@@ -1778,11 +1737,11 @@ function RequirementDisplay({
 
           <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3">
 
-            <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
+            <span className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
               Compaction Time
             </span>
 
-            <span className="text-xs font-bold text-[#e4cc7e]">
+            <span className="shrink-0 whitespace-nowrap text-xs font-bold text-[#e4cc7e]">
               {formatHours(
                 expanded.timeHours
               )}
