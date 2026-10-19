@@ -40,6 +40,10 @@ type Drill = {
 type OpenSections = {
   overview: boolean;
   target: boolean;
+
+  targetPath: boolean;
+  targetMaterials: boolean;
+
   moon: boolean;
   mars: boolean;
   sun: boolean;
@@ -66,9 +70,6 @@ type ExpandedRequirement = {
 
 /* =========================================================
    TYPED DRILL DATA
-
-   drills.ts currently infers region as string.
-   This narrows it to the Region type used by this page.
    ========================================================= */
 
 const typedDrills =
@@ -87,7 +88,12 @@ const STORAGE_KEY =
 
 const DEFAULT_OPEN_SECTIONS: OpenSections = {
   overview: true,
+
   target: true,
+
+  targetPath: false,
+  targetMaterials: false,
+
   moon: true,
   mars: true,
   sun: true,
@@ -797,6 +803,28 @@ export default function DrillsPage() {
     ]);
 
   /* =======================================================
+     COMPACTED ITEMS USED IN TARGET
+     ======================================================= */
+
+  const compactedTargetTotals =
+    useMemo(() => {
+      return targetMaterialTotals.filter(
+        (
+          total
+        ) =>
+          getExpandedRequirement({
+            material:
+              total.material,
+
+            amount:
+              total.amount,
+          }) !== null
+      );
+    }, [
+      targetMaterialTotals,
+    ]);
+
+  /* =======================================================
      REGION GROUPS
      ======================================================= */
 
@@ -1064,8 +1092,6 @@ export default function DrillsPage() {
 
           </div>
 
-          {/* PROGRESS BAR */}
-
           <div className="mt-5">
 
             <div className="mb-2 flex items-center justify-between gap-4 text-xs text-white/40">
@@ -1094,8 +1120,6 @@ export default function DrillsPage() {
             </div>
 
           </div>
-
-          {/* NEXT DRILL */}
 
           {nextDrill ? (
 
@@ -1292,17 +1316,36 @@ export default function DrillsPage() {
           {drillsToTarget.length >
           0 ? (
 
-            <>
+            <div className="mt-5 space-y-4">
 
-              {/* UPGRADE PATH */}
+              {/* ===========================================
+                  UPGRADE PATH
+                  =========================================== */}
 
-              <div className="mt-5">
+              <PlannerSection
+                title="Upgrade Path"
 
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
-                  Upgrade Path
-                </p>
+                subtitle={`${drillsToTarget.length} upgrade${
+                  drillsToTarget.length ===
+                  1
+                    ? ""
+                    : "s"
+                } remaining`}
 
-                <div className="mt-3 flex flex-wrap gap-2">
+                open={
+                  state
+                    .openSections
+                    .targetPath
+                }
+
+                onToggle={() =>
+                  toggleSection(
+                    "targetPath"
+                  )
+                }
+              >
+
+                <div className="flex flex-wrap gap-2">
 
                   {drillsToTarget.map(
                     (
@@ -1339,196 +1382,130 @@ export default function DrillsPage() {
 
                 </div>
 
-              </div>
+              </PlannerSection>
 
-              {/* DIRECT TOTALS */}
+              {/* ===========================================
+                  MATERIALS REQUIRED
+                  =========================================== */}
 
-              <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-black/10">
+              <PlannerSection
+                title="Materials Required"
 
-                <div className="border-b border-white/10 px-4 py-3">
+                subtitle="Raw materials, compacted items and compaction time"
 
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
-                    Drill Recipe Totals
+                open={
+                  state
+                    .openSections
+                    .targetMaterials
+                }
+
+                onToggle={() =>
+                  toggleSection(
+                    "targetMaterials"
+                  )
+                }
+
+                rightContent={
+                  <div className="rounded-xl border border-[#d2b568]/25 bg-black/10 px-4 py-2 text-right">
+
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">
+                      Total Compaction
+                    </p>
+
+                    <p className="mt-1 text-lg font-bold text-[#e3ca80]">
+                      {formatHours(
+                        expandedTargetTotals.totalCompactionHours
+                      )}
+                    </p>
+
+                  </div>
+                }
+              >
+
+                <div>
+
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#dfc578]">
+                    Total Raw Materials
                   </p>
 
                   <p className="mt-1 text-xs text-white/35">
-                    The direct materials listed in each drill recipe.
+                    Includes the materials needed to create all compacted and plasma-compacted items.
                   </p>
 
-                </div>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
-                <div className="grid gap-2 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {expandedTargetTotals.materials.map(
+                      (
+                        total
+                      ) => (
 
-                  {targetMaterialTotals.map(
-                    (
-                      total
-                    ) => (
+                        <MaterialBox
+                          key={
+                            total.material
+                          }
 
-                      <MaterialBox
-                        key={
-                          total.material
-                        }
+                          material={
+                            total.material
+                          }
 
-                        material={
-                          total.material
-                        }
+                          amount={
+                            total.amount
+                          }
+                        />
 
-                        amount={
-                          total.amount
-                        }
-                      />
-
-                    )
-                  )}
-
-                </div>
-
-              </div>
-
-              {/* EXPANDED TOTALS */}
-
-              <div className="mt-6 overflow-hidden rounded-2xl border border-[#b3914d]/30 bg-[#302a1c]">
-
-                <div className="border-b border-white/10 px-4 py-4">
-
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-
-                    <div>
-
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#dfc578]">
-                        Fully Expanded Materials
-                      </p>
-
-                      <p className="mt-1 text-xs text-white/40">
-                        Compacted and plasma-compacted items converted into their underlying materials.
-                      </p>
-
-                    </div>
-
-                    <div className="rounded-xl border border-[#d2b568]/25 bg-black/10 px-4 py-3">
-
-                      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">
-                        Total Compaction Time
-                      </p>
-
-                      <p className="mt-1 text-xl font-bold text-[#e3ca80]">
-                        {formatHours(
-                          expandedTargetTotals.totalCompactionHours
-                        )}
-                      </p>
-
-                    </div>
+                      )
+                    )}
 
                   </div>
 
                 </div>
 
-                <div className="grid gap-2 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {compactedTargetTotals.length >
+                  0 && (
 
-                  {expandedTargetTotals.materials.map(
-                    (
-                      total
-                    ) => (
+                  <div className="mt-6 border-t border-white/10 pt-5">
 
-                      <MaterialBox
-                        key={
-                          total.material
-                        }
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
+                      Compacted Items Required
+                    </p>
 
-                        material={
-                          total.material
-                        }
+                    <p className="mt-1 text-xs text-white/30">
+                      These quantities are already included in the raw material totals above.
+                    </p>
 
-                        amount={
-                          total.amount
-                        }
-                      />
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
-                    )
-                  )}
+                      {compactedTargetTotals.map(
+                        (
+                          total
+                        ) => (
 
-                </div>
+                          <MaterialBox
+                            key={
+                              total.material
+                            }
 
-              </div>
+                            material={
+                              total.material
+                            }
 
-              {/* INDIVIDUAL UPGRADES */}
-
-              <div className="mt-6">
-
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
-                  Individual Upgrade Costs
-                </p>
-
-                <div className="mt-3 grid gap-3 lg:grid-cols-2">
-
-                  {drillsToTarget.map(
-                    (
-                      drill
-                    ) => (
-
-                      <div
-                        key={
-                          drill.id
-                        }
-
-                        className="rounded-xl border border-white/10 bg-black/10 p-4"
-                      >
-
-                        <div className="flex items-start justify-between gap-3">
-
-                          <div>
-
-                            <p className="font-bold">
-                              {drill.name}
-                            </p>
-
-                            <p className="mt-1 text-xs text-white/35">
-                              Requires{" "}
-                              {drill.prerequisite}
-                            </p>
-
-                          </div>
-
-                          <RegionBadge
-                            region={
-                              drill.region
+                            amount={
+                              total.amount
                             }
                           />
 
-                        </div>
+                        )
+                      )}
 
-                        <div className="mt-4 space-y-3">
+                    </div>
 
-                          {drill.requirements.map(
-                            (
-                              requirement
-                            ) => (
+                  </div>
 
-                              <RequirementDisplay
-                                key={
-                                  requirement.material
-                                }
+                )}
 
-                                requirement={
-                                  requirement
-                                }
-                              />
+              </PlannerSection>
 
-                            )
-                          )}
-
-                        </div>
-
-                      </div>
-
-                    )
-                  )}
-
-                </div>
-
-              </div>
-
-            </>
+            </div>
 
           ) : (
 
@@ -1674,12 +1651,6 @@ export default function DrillsPage() {
 
 /* =========================================================
    REQUIREMENT DISPLAY
-
-   Normal items:
-   simple row
-
-   Compacted / Plasma items:
-   collapsed by default
    ========================================================= */
 
 function RequirementDisplay({
@@ -1697,10 +1668,6 @@ function RequirementDisplay({
     getExpandedRequirement(
       requirement
     );
-
-  /* =======================================================
-     NORMAL MATERIAL
-     ======================================================= */
 
   if (
     !expanded
@@ -1726,15 +1693,9 @@ function RequirementDisplay({
     );
   }
 
-  /* =======================================================
-     COMPACTED / PLASMA MATERIAL
-     ======================================================= */
-
   return (
 
     <div className="overflow-hidden rounded-xl border border-[#a88e4d]/25 bg-black/10">
-
-      {/* HEADER */}
 
       <button
         type="button"
@@ -1787,13 +1748,9 @@ function RequirementDisplay({
 
       </button>
 
-      {/* EXPANDED CONTENT */}
-
       {open && (
 
         <div className="border-t border-white/5 bg-black/10 px-3 py-3">
-
-          {/* PLASMA UNDERLYING COMPACTED ITEM */}
 
           {expanded.isPlasma && (
 
@@ -1821,8 +1778,6 @@ function RequirementDisplay({
             </div>
 
           )}
-
-          {/* RAW INGREDIENTS */}
 
           <div className="space-y-1.5">
 
@@ -1859,8 +1814,6 @@ function RequirementDisplay({
 
           </div>
 
-          {/* TIME */}
-
           <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3">
 
             <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
@@ -1880,6 +1833,82 @@ function RequirementDisplay({
       )}
 
     </div>
+
+  );
+}
+
+/* =========================================================
+   PLANNER SUBSECTION
+   ========================================================= */
+
+function PlannerSection({
+  title,
+  subtitle,
+  open,
+  onToggle,
+  rightContent,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  open: boolean;
+  onToggle: () => void;
+  rightContent?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+
+    <section className="overflow-hidden rounded-2xl border border-white/10 bg-black/10">
+
+      <button
+        type="button"
+
+        onClick={
+          onToggle
+        }
+
+        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-white/[0.02]"
+      >
+
+        <div>
+
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d8cc87]">
+            {title}
+          </p>
+
+          {subtitle && (
+
+            <p className="mt-1 text-xs text-white/35">
+              {subtitle}
+            </p>
+
+          )}
+
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3">
+
+          {rightContent}
+
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#3a3624] text-base font-bold text-[#dfd18b]">
+            {open
+              ? "−"
+              : "+"}
+          </span>
+
+        </div>
+
+      </button>
+
+      {open && (
+
+        <div className="border-t border-white/10 p-4">
+          {children}
+        </div>
+
+      )}
+
+    </section>
 
   );
 }
