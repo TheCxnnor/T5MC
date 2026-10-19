@@ -61,61 +61,49 @@ export const materials = {
 
   magma: {
     name: "Magma",
-    magmaValue: 1,
   },
 
   compactedLunarAlloy: {
     name: "Compacted Lunar Alloy",
-    magmaValue: 0,
   },
 
   compactedMartianAlloy: {
     name: "Compacted Martian Alloy",
-    magmaValue: 0,
   },
 
   compactedSolarAlloy: {
     name: "Compacted Solar Alloy",
-    magmaValue: 0,
   },
 
   plasmaCompactedLunarAlloy: {
     name: "Plasma (Compacted Lunar Alloy)",
-    magmaValue: 0,
   },
 
   plasmaCompactedMartianAlloy: {
     name: "Plasma (Compacted Martian Alloy)",
-    magmaValue: 0,
   },
 
   plasmaCompactedSolarAlloy: {
     name: "Plasma (Compacted Solar Alloy)",
-    magmaValue: 0,
   },
 
   compactedMagma: {
     name: "Compacted Magma",
-    magmaValue: 0,
   },
 
   plasmaCompactedMagma: {
     name: "Plasma (Compacted Magma)",
-    magmaValue: 0,
   },
 
   coronaSurgeFlare: {
     name: "Corona Surge Flare",
-    magmaValue: 0,
   },
 
   stellarPulseFlare: {
     name: "Stellar Pulse Flare",
-    magmaValue: 0,
   },
 
   eternalSingularityFlare: {
     name: "Eternal Singularity Flare",
-    magmaValue: 0,
   },
 };
