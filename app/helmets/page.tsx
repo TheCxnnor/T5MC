@@ -57,7 +57,7 @@ type ExpandedRequirement = {
 };
 
 /* =========================================================
-   TYPED DATA
+   DATA
    ========================================================= */
 
 const typedHelmets =
@@ -723,6 +723,21 @@ export default function HelmetsPage() {
     }, []);
 
   /* =======================================================
+     SUNSUIT SPLIT
+
+     First item = base Sunsuit.
+     Remaining five = red upgrades.
+     ======================================================= */
+
+  const baseSunsuit =
+    groupedHelmets.sun[0];
+
+  const redSunsuitUpgrades =
+    groupedHelmets.sun.slice(
+      1
+    );
+
+  /* =======================================================
      TOGGLE UPGRADE
      ======================================================= */
 
@@ -1123,61 +1138,57 @@ export default function HelmetsPage() {
           }
         >
 
-          <div className="overflow-x-auto pb-2">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
 
-            <div className="grid min-w-[1250px] grid-cols-5 gap-4">
+            {groupedHelmets.space.map(
+              (
+                upgrade
+              ) => {
 
-              {groupedHelmets.space.map(
-                (
-                  upgrade
-                ) => {
-
-                  const index =
-                    getHelmetIndex(
-                      upgrade.id
-                    );
-
-                  const obtained =
-                    completedSet.has(
-                      upgrade.id
-                    );
-
-                  const isNext =
-                    index ===
-                    highestCompletedIndex +
-                      1;
-
-                  return (
-
-                    <HelmetCard
-                      key={
-                        upgrade.id
-                      }
-
-                      upgrade={
-                        upgrade
-                      }
-
-                      obtained={
-                        obtained
-                      }
-
-                      isNext={
-                        isNext
-                      }
-
-                      onToggle={() =>
-                        toggleUpgrade(
-                          upgrade.id
-                        )
-                      }
-                    />
-
+                const index =
+                  getHelmetIndex(
+                    upgrade.id
                   );
-                }
-              )}
 
-            </div>
+                const obtained =
+                  completedSet.has(
+                    upgrade.id
+                  );
+
+                const isNext =
+                  index ===
+                  highestCompletedIndex +
+                    1;
+
+                return (
+
+                  <HelmetCard
+                    key={
+                      upgrade.id
+                    }
+
+                    upgrade={
+                      upgrade
+                    }
+
+                    obtained={
+                      obtained
+                    }
+
+                    isNext={
+                      isNext
+                    }
+
+                    onToggle={() =>
+                      toggleUpgrade(
+                        upgrade.id
+                      )
+                    }
+                  />
+
+                );
+              }
+            )}
 
           </div>
 
@@ -1206,11 +1217,53 @@ export default function HelmetsPage() {
           }
         >
 
-          <div className="overflow-x-auto pb-2">
+          <div className="space-y-4">
 
-            <div className="grid min-w-[1500px] grid-cols-6 gap-4">
+            {/* ===============================================
+                BASE SUNSUIT
 
-              {groupedHelmets.sun.map(
+                Full width above the five red upgrades.
+                =============================================== */}
+
+            {baseSunsuit && (
+
+              <HelmetCard
+                upgrade={
+                  baseSunsuit
+                }
+
+                obtained={
+                  completedSet.has(
+                    baseSunsuit.id
+                  )
+                }
+
+                isNext={
+                  getHelmetIndex(
+                    baseSunsuit.id
+                  ) ===
+                  highestCompletedIndex +
+                    1
+                }
+
+                onToggle={() =>
+                  toggleUpgrade(
+                    baseSunsuit.id
+                  )
+                }
+
+                fullWidth
+              />
+
+            )}
+
+            {/* ===============================================
+                FIVE RED SUNSUIT UPGRADES
+                =============================================== */}
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+
+              {redSunsuitUpgrades.map(
                 (
                   upgrade
                 ) => {
@@ -1439,11 +1492,13 @@ function HelmetCard({
   obtained,
   isNext,
   onToggle,
+  fullWidth = false,
 }: {
   upgrade: HelmetUpgrade;
   obtained: boolean;
   isNext: boolean;
   onToggle: () => void;
+  fullWidth?: boolean;
 }) {
   const theme =
     getHelmetTheme(
@@ -1453,7 +1508,11 @@ function HelmetCard({
   return (
 
     <article
-      className={`flex min-w-[230px] flex-col rounded-2xl border p-4 transition ${
+      className={`flex min-w-0 flex-col rounded-2xl border p-4 transition ${
+        fullWidth
+          ? "w-full"
+          : ""
+      } ${
         obtained
           ? "border-white/5 bg-black/10 opacity-55"
           : isNext
@@ -1468,7 +1527,7 @@ function HelmetCard({
 
       <div className="flex items-start justify-between gap-3">
 
-        <div>
+        <div className="min-w-0">
 
           <HelmetRank
             upgrade={
@@ -1521,7 +1580,13 @@ function HelmetCard({
           REQUIREMENTS
           =================================================== */}
 
-      <div className="mt-4 space-y-3">
+      <div
+        className={
+          fullWidth
+            ? "mt-4 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            : "mt-4 min-w-0 space-y-3"
+        }
+      >
 
         {upgrade.requirements.map(
           (
@@ -1583,7 +1648,7 @@ function RequirementDisplay({
     );
 
   /* =======================================================
-     NORMAL ITEM
+     NORMAL MATERIAL
      ======================================================= */
 
   if (
@@ -1591,15 +1656,15 @@ function RequirementDisplay({
   ) {
     return (
 
-      <div className="flex items-center justify-between gap-3 rounded-lg bg-black/10 px-3 py-2 text-xs">
+      <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-black/10 px-3 py-2 text-sm">
 
-        <span className="whitespace-nowrap text-white/60">
+        <span className="min-w-0 break-words text-white/60">
           {getMaterialLabel(
             requirement.material
           )}
         </span>
 
-        <span className="shrink-0 whitespace-nowrap font-bold">
+        <span className="shrink-0 font-bold">
           {formatNumber(
             requirement.amount
           )}
@@ -1611,12 +1676,12 @@ function RequirementDisplay({
   }
 
   /* =======================================================
-     COMPACTED / PLASMA ITEM
+     COMPACTED / PLASMA MATERIAL
      ======================================================= */
 
   return (
 
-    <div className="overflow-hidden rounded-xl border border-[#a88e4d]/25 bg-black/10">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-[#a88e4d]/25 bg-black/10">
 
       <button
         type="button"
@@ -1630,20 +1695,38 @@ function RequirementDisplay({
           )
         }
 
-        className="flex w-full items-center justify-between gap-2 px-3 py-3 text-left transition hover:bg-white/[0.025]"
+        className="flex w-full min-w-0 items-center gap-3 px-3 py-3 text-left transition hover:bg-white/[0.025]"
       >
 
-        <span className="whitespace-nowrap text-xs font-semibold text-[#e0ca84]">
-          {getMaterialLabel(
-            requirement.material
-          )}
-        </span>
+        {/* MATERIAL NAME + PLASMA NOTE */}
 
-        <span className="ml-auto shrink-0 whitespace-nowrap text-xs font-bold">
+        <div className="min-w-0 flex-1">
+
+          <p className="break-words text-sm font-semibold leading-5 text-[#e0ca84]">
+            {getMaterialLabel(
+              requirement.material
+            )}
+          </p>
+
+          {expanded.isPlasma && (
+
+            <p className="mt-1 text-[10px] leading-4 text-white/35">
+              1:1 plasma conversion
+            </p>
+
+          )}
+
+        </div>
+
+        {/* AMOUNT */}
+
+        <span className="shrink-0 text-sm font-bold">
           {formatNumber(
             requirement.amount
           )}
         </span>
+
+        {/* EXPAND BUTTON */}
 
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#413821] text-sm font-bold text-[#e4cc7e]">
           {open
@@ -1662,7 +1745,7 @@ function RequirementDisplay({
         <div className="border-t border-white/5 bg-black/10 px-3 py-3">
 
           {/* =================================================
-              PLASMA CONVERSION
+              PLASMA SOURCE
               ================================================= */}
 
           {expanded.isPlasma && (
@@ -1670,16 +1753,16 @@ function RequirementDisplay({
             <div className="mb-3 rounded-lg border border-[#9b8248]/20 bg-[#332d1e] px-3 py-2">
 
               <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30">
-                1:1 Plasma Conversion
+                Underlying Compacted Item
               </p>
 
-              <div className="mt-2 flex items-center justify-between gap-3">
+              <div className="mt-1 flex min-w-0 items-start justify-between gap-3">
 
-                <span className="whitespace-nowrap text-[11px] font-semibold text-[#d8c27c]">
+                <span className="min-w-0 break-words text-xs font-semibold text-[#d8c27c]">
                   {expanded.compactedItem.name}
                 </span>
 
-                <span className="shrink-0 whitespace-nowrap text-xs font-bold text-[#ead690]">
+                <span className="shrink-0 text-xs font-bold text-[#ead690]">
                   ×
                   {formatNumber(
                     expanded.amount
@@ -1708,17 +1791,17 @@ function RequirementDisplay({
                     ingredient.material
                   }
 
-                  className="flex items-center justify-between gap-3 text-[11px]"
+                  className="flex min-w-0 items-start justify-between gap-3 text-xs"
                 >
 
-                  <span className="whitespace-nowrap text-white/45">
+                  <span className="min-w-0 break-words text-white/45">
                     ↳{" "}
                     {getMaterialLabel(
                       ingredient.material
                     )}
                   </span>
 
-                  <span className="shrink-0 whitespace-nowrap font-semibold text-white/70">
+                  <span className="shrink-0 font-semibold text-white/70">
                     {formatNumber(
                       ingredient.amount
                     )}
@@ -1737,11 +1820,11 @@ function RequirementDisplay({
 
           <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3">
 
-            <span className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
               Compaction Time
             </span>
 
-            <span className="shrink-0 whitespace-nowrap text-xs font-bold text-[#e4cc7e]">
+            <span className="shrink-0 text-xs font-bold text-[#e4cc7e]">
               {formatHours(
                 expanded.timeHours
               )}
