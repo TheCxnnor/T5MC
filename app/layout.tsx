@@ -41,6 +41,13 @@ export default function RootLayout({
               </Link>
 
               <Link
+                href="/pve"
+                className="rounded-lg px-3 py-2 text-[#c8d0d8] transition hover:bg-[#343b43] hover:text-white"
+              >
+                PvE Calculator
+              </Link>
+
+              <Link
                 href="/drills"
                 className="rounded-lg px-3 py-2 text-[#c8d0d8] transition hover:bg-[#343b43] hover:text-white"
               >
