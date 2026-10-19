@@ -85,6 +85,8 @@ type ProfitSavedState = {
 
   cashRegister: boolean;
 
+  redroot: boolean;
+
   afkTime: number;
 
   magmaPrice: number;
@@ -213,6 +215,8 @@ const DEFAULT_PROFIT_STATE: ProfitSavedState =
     t4PotCost: 150,
 
     cashRegister: false,
+
+    redroot: false,
 
     afkTime: 1,
 
@@ -1186,9 +1190,15 @@ function calculateOre(
       potionTier
     ];
 
+  const redrootMultiplier =
+    settings.redroot
+      ? 8
+      : 1;
+
   const effectiveFortune =
     settings.baseFortune *
-    potion.fortuneMultiplier;
+    potion.fortuneMultiplier *
+    redrootMultiplier;
 
   const currentPotionData =
     getPotionCostData(
@@ -1842,7 +1852,10 @@ export default function ProfitPage() {
         potionData[
           settings.potion
         ]
-          .fortuneMultiplier;
+          .fortuneMultiplier *
+        (settings.redroot
+          ? 8
+          : 1);
 
       return {
         powerRank,
@@ -2027,6 +2040,20 @@ export default function ProfitPage() {
                 updateSetting(
                   "cashRegister",
                   !settings.cashRegister
+                )
+              }
+            />
+
+            <ToggleCard
+              label="Redroot"
+              description="+700% Fortune • 1 hour per Redroot"
+              enabled={
+                settings.redroot
+              }
+              onToggle={() =>
+                updateSetting(
+                  "redroot",
+                  !settings.redroot
                 )
               }
             />
@@ -2245,6 +2272,9 @@ export default function ProfitPage() {
               cashRegister={
                 settings.cashRegister
               }
+              redroot={
+                settings.redroot
+              }
               duneRamOwned={
                 settings.duneRamOwned
               }
@@ -2348,7 +2378,8 @@ export default function ProfitPage() {
           Potion, T1, T2, T3 and T4. Magma value is shown
           separately and is never included in mining profit.
           Expected drops are rounded to the nearest whole
-          item.
+          item. Redroot adds +700% Fortune and is assumed to
+          be kept active for the full AFK session when enabled.
         </div>
 
       </div>
@@ -2954,6 +2985,7 @@ function BestSetup({
   powerRank,
   afkTime,
   cashRegister,
+  redroot,
   duneRamOwned,
   duneRamLevel,
   ravenOwned,
@@ -2966,6 +2998,8 @@ function BestSetup({
   afkTime: number;
 
   cashRegister: boolean;
+
+  redroot: boolean;
 
   duneRamOwned: boolean;
 
@@ -3046,6 +3080,12 @@ function BestSetup({
         {cashRegister && (
           <SetupTag>
             Cash Register
+          </SetupTag>
+        )}
+
+        {redroot && (
+          <SetupTag>
+            Redroot
           </SetupTag>
         )}
 
