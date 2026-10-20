@@ -47,6 +47,8 @@ type OpenSections = {
   moon: boolean;
   mars: boolean;
   sun: boolean;
+
+  totals: boolean;
 };
 
 type SavedState = {
@@ -97,6 +99,8 @@ const DEFAULT_OPEN_SECTIONS: OpenSections = {
   moon: true,
   mars: true,
   sun: true,
+
+  totals: false,
 };
 
 const DEFAULT_STATE: SavedState = {
@@ -859,6 +863,109 @@ export default function DrillsPage() {
           ),
       };
     }, []);
+
+  /* =======================================================
+     OVERALL REMAINING MATERIAL TOTALS
+     ======================================================= */
+
+  const remainingDrills =
+    useMemo(() => {
+      return typedDrills.slice(
+        highestObtainedIndex +
+          1
+      );
+    }, [
+      highestObtainedIndex,
+    ]);
+
+  const remainingMaterialTotals =
+    useMemo(() => {
+      const totals =
+        new Map<
+          string,
+          number
+        >();
+
+      let totalCompactionHours =
+        0;
+
+      remainingDrills.forEach(
+        (
+          drill
+        ) => {
+          drill.requirements.forEach(
+            (
+              requirement
+            ) => {
+              const expanded =
+                getExpandedRequirement(
+                  requirement
+                );
+
+              if (
+                expanded
+              ) {
+                totalCompactionHours +=
+                  expanded.timeHours;
+
+                expanded.ingredients.forEach(
+                  (
+                    ingredient
+                  ) => {
+                    totals.set(
+                      ingredient.material,
+
+                      (
+                        totals.get(
+                          ingredient.material
+                        ) ??
+                        0
+                      ) +
+                        ingredient.amount
+                    );
+                  }
+                );
+
+                return;
+              }
+
+              totals.set(
+                requirement.material,
+
+                (
+                  totals.get(
+                    requirement.material
+                  ) ??
+                  0
+                ) +
+                  requirement.amount
+              );
+            }
+          );
+        }
+      );
+
+      return {
+        materials:
+          Array.from(
+            totals.entries()
+          ).map(
+            (
+              [
+                material,
+                amount,
+              ]
+            ): MaterialTotal => ({
+              material,
+              amount,
+            })
+          ),
+
+        totalCompactionHours,
+      };
+    }, [
+      remainingDrills,
+    ]);
 
   /* =======================================================
      TOGGLE DRILL
@@ -1624,6 +1731,113 @@ export default function DrillsPage() {
 
           )
         )}
+
+        {/* =================================================
+            MATERIAL TOTALS
+            ================================================= */}
+
+        <MainSection
+          eyebrow="Materials"
+          title="Material Totals"
+
+          open={
+            state
+              .openSections
+              .totals
+          }
+
+          onToggle={() =>
+            toggleSection(
+              "totals"
+            )
+          }
+
+          borderClass="border-[#56734f]"
+          backgroundClass="bg-[#202a20]"
+          accentClass="text-[#a9cf9f]"
+          buttonClass="bg-[#30432d] text-[#b9dfaf]"
+        >
+
+          <div className="rounded-2xl border border-white/10 bg-black/10 p-4 md:p-5">
+
+            <div className="flex flex-wrap items-start justify-between gap-4">
+
+              <div>
+
+                <h3 className="text-lg font-bold">
+                  Remaining Materials
+                </h3>
+
+                <p className="mt-1 text-xs text-white/35">
+                  Everything still required from your next drill through Fusion Drill.
+                </p>
+
+              </div>
+
+              <div className="rounded-xl border border-[#8ca87f]/20 bg-black/10 px-4 py-3 text-right">
+
+                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">
+                  Remaining Compaction
+                </p>
+
+                <p className="mt-1 text-lg font-bold text-[#b9dfaf]">
+                  {formatHours(
+                    remainingMaterialTotals.totalCompactionHours
+                  )}
+                </p>
+
+              </div>
+
+            </div>
+
+            {remainingMaterialTotals.materials.length >
+            0 ? (
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+
+                {remainingMaterialTotals.materials.map(
+                  (
+                    total
+                  ) => (
+
+                    <MaterialBox
+                      key={
+                        total.material
+                      }
+
+                      material={
+                        total.material
+                      }
+
+                      amount={
+                        total.amount
+                      }
+                    />
+
+                  )
+                )}
+
+              </div>
+
+            ) : (
+
+              <div className="mt-4 rounded-xl border border-white/10 bg-black/10 p-5 text-center">
+
+                <p className="font-semibold text-[#b9dfaf]">
+                  All drills completed
+                </p>
+
+                <p className="mt-1 text-sm text-white/35">
+                  You have no remaining drill materials.
+                </p>
+
+              </div>
+
+            )}
+
+          </div>
+
+        </MainSection>
 
         {/* =================================================
             FOOTNOTE

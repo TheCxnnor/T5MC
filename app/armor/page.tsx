@@ -32,6 +32,7 @@ type OpenSections = {
   overview: boolean;
   moonMars: boolean;
   sun: boolean;
+  totals: boolean;
 };
 
 type SavedState = {
@@ -67,6 +68,7 @@ const DEFAULT_OPEN_SECTIONS: OpenSections = {
   overview: true,
   moonMars: true,
   sun: true,
+  totals: false,
 };
 
 const DEFAULT_STATE: SavedState = {
@@ -84,7 +86,7 @@ const MATERIAL_LABELS: Record<
   string
 > = {
   coinsQd:
-    "Qd Coins",
+    "Coins",
 
   starShards:
     "Star-Shards",
@@ -162,6 +164,24 @@ function formatNumber(
   );
 }
 
+function formatMaterialValue(
+  material: string,
+  amount: number
+) {
+  if (
+    material ===
+    "coinsQd"
+  ) {
+    return `${formatNumber(
+      amount
+    )}Qd`;
+  }
+
+  return formatNumber(
+    amount
+  );
+}
+
 function formatHours(
   value: number
 ) {
@@ -212,10 +232,20 @@ function getPieceKey(
   return `${tierId}:${pieceType}`;
 }
 
+function getTierIndex(
+  tierId: string
+) {
+  return armor.findIndex(
+    (
+      tier
+    ) =>
+      tier.id ===
+      tierId
+  );
+}
+
 /* =========================================================
    COMPACTED ITEM HELPERS
-
-   This now matches the working Drills page.
    ========================================================= */
 
 function getDirectCompactedItem(
@@ -412,7 +442,7 @@ export default function ArmorPage() {
   ]);
 
   /* =======================================================
-     COMPLETED
+     COMPLETED SET
      ======================================================= */
 
   const completedSet =
@@ -471,7 +501,7 @@ export default function ArmorPage() {
     }, []);
 
   const completedPieces =
-    state.completedPieces.length;
+    completedSet.size;
 
   const completedTiers =
     useMemo(() => {
@@ -505,6 +535,10 @@ export default function ArmorPage() {
         100
       : 0;
 
+  /* =======================================================
+     CURRENT TIER
+     ======================================================= */
+
   const currentTier =
     useMemo(() => {
       return (
@@ -531,111 +565,315 @@ export default function ArmorPage() {
     ]);
 
   /* =======================================================
+     REMAINING MATERIAL TOTALS
+
+     Only counts armor pieces that are not completed.
+     ======================================================= */
+
+  const remainingMaterialTotals =
+    useMemo(() => {
+      const totals =
+        new Map<
+          string,
+          number
+        >();
+
+      armor.forEach(
+        (
+          tier
+        ) => {
+          tier.pieces.forEach(
+            (
+              piece
+            ) => {
+              const pieceKey =
+                getPieceKey(
+                  tier.id,
+                  piece.type
+                );
+
+              if (
+                completedSet.has(
+                  pieceKey
+                )
+              ) {
+                return;
+              }
+
+              piece.requirements.forEach(
+                (
+                  requirement
+                ) => {
+                  totals.set(
+                    requirement.material,
+
+                    (
+                      totals.get(
+                        requirement.material
+                      ) ??
+                      0
+                    ) +
+                      requirement.amount
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
+
+      return Array.from(
+        totals.entries()
+      ).map(
+        (
+          [
+            material,
+            amount,
+          ]
+        ): MaterialTotal => ({
+          material,
+          amount,
+        })
+      );
+    }, [
+      completedSet,
+    ]);
+
+  /* =======================================================
      TOGGLE PIECE
+
+     Checking a later piece automatically completes that
+     piece through all previous tiers.
+
+     Unchecking clears that piece from the selected tier
+     and all later tiers.
      ======================================================= */
 
   function togglePiece(
     tierId: string,
     pieceType: ArmorPieceType
   ) {
-    const key =
+    const tierIndex =
+      getTierIndex(
+        tierId
+      );
+
+    if (
+      tierIndex <
+      0
+    ) {
+      return;
+    }
+
+    const selectedKey =
       getPieceKey(
         tierId,
         pieceType
       );
 
+    const alreadyCompleted =
+      completedSet.has(
+        selectedKey
+      );
+
     setState(
       (
         current
       ) => {
-        const exists =
-          current.completedPieces.includes(
-            key
+        const next =
+          new Set(
+            current.completedPieces
           );
 
-        return {
-          ...current,
+        /* =================================================
+           UNCHECK
+           ================================================= */
 
-          completedPieces:
-            exists
-              ? current.completedPieces.filter(
-                  (
-                    item
-                  ) =>
-                    item !==
-                    key
-                )
-              : [
-                  ...current.completedPieces,
-                  key,
-                ],
-        };
-      }
-    );
-  }
-
-  /* =======================================================
-     TOGGLE TIER
-     ======================================================= */
-
-  function toggleTier(
-    tier: ArmorTier
-  ) {
-    const tierKeys =
-      tier.pieces.map(
-        (
-          piece
-        ) =>
-          getPieceKey(
-            tier.id,
-            piece.type
-          )
-      );
-
-    const allComplete =
-      tierKeys.every(
-        (
-          key
-        ) =>
-          completedSet.has(
-            key
-          )
-      );
-
-    setState(
-      (
-        current
-      ) => {
         if (
-          allComplete
+          alreadyCompleted
         ) {
+          armor.forEach(
+            (
+              tier,
+              index
+            ) => {
+              if (
+                index >=
+                tierIndex
+              ) {
+                next.delete(
+                  getPieceKey(
+                    tier.id,
+                    pieceType
+                  )
+                );
+              }
+            }
+          );
+
           return {
             ...current,
 
             completedPieces:
-              current.completedPieces.filter(
-                (
-                  key
-                ) =>
-                  !tierKeys.includes(
-                    key
-                  )
+              Array.from(
+                next
               ),
           };
         }
 
-        const merged =
-          new Set([
-            ...current.completedPieces,
-            ...tierKeys,
-          ]);
+        /* =================================================
+           CHECK
+           ================================================= */
+
+        armor.forEach(
+          (
+            tier,
+            index
+          ) => {
+            if (
+              index <=
+              tierIndex
+            ) {
+              next.add(
+                getPieceKey(
+                  tier.id,
+                  pieceType
+                )
+              );
+            }
+          }
+        );
 
         return {
           ...current,
 
           completedPieces:
             Array.from(
-              merged
+              next
+            ),
+        };
+      }
+    );
+  }
+
+  /* =======================================================
+     TOGGLE WHOLE TIER
+     ======================================================= */
+
+  function toggleTier(
+    tier: ArmorTier
+  ) {
+    const tierIndex =
+      getTierIndex(
+        tier.id
+      );
+
+    if (
+      tierIndex <
+      0
+    ) {
+      return;
+    }
+
+    const tierFullyCompleted =
+      tier.pieces.every(
+        (
+          piece
+        ) =>
+          completedSet.has(
+            getPieceKey(
+              tier.id,
+              piece.type
+            )
+          )
+      );
+
+    setState(
+      (
+        current
+      ) => {
+        const next =
+          new Set(
+            current.completedPieces
+          );
+
+        /* =================================================
+           UNCHECK WHOLE TIER
+           ================================================= */
+
+        if (
+          tierFullyCompleted
+        ) {
+          armor.forEach(
+            (
+              armorTier,
+              index
+            ) => {
+              if (
+                index >=
+                tierIndex
+              ) {
+                armorTier.pieces.forEach(
+                  (
+                    piece
+                  ) => {
+                    next.delete(
+                      getPieceKey(
+                        armorTier.id,
+                        piece.type
+                      )
+                    );
+                  }
+                );
+              }
+            }
+          );
+
+          return {
+            ...current,
+
+            completedPieces:
+              Array.from(
+                next
+              ),
+          };
+        }
+
+        /* =================================================
+           CHECK WHOLE TIER
+           ================================================= */
+
+        armor.forEach(
+          (
+            armorTier,
+            index
+          ) => {
+            if (
+              index <=
+              tierIndex
+            ) {
+              armorTier.pieces.forEach(
+                (
+                  piece
+                ) => {
+                  next.add(
+                    getPieceKey(
+                      armorTier.id,
+                      piece.type
+                    )
+                  );
+                }
+              );
+            }
+          }
+        );
+
+        return {
+          ...current,
+
+          completedPieces:
+            Array.from(
+              next
             ),
         };
       }
@@ -679,6 +917,7 @@ export default function ArmorPage() {
         current
       ) => ({
         ...current,
+
         completedPieces: [],
       })
     );
@@ -781,6 +1020,10 @@ export default function ArmorPage() {
 
           </div>
 
+          {/* =================================================
+              PROGRESS BAR
+              ================================================= */}
+
           <div className="mt-5">
 
             <div className="mb-2 flex items-center justify-between gap-4 text-xs text-white/40">
@@ -809,6 +1052,10 @@ export default function ArmorPage() {
             </div>
 
           </div>
+
+          {/* =================================================
+              CURRENT TIER
+              ================================================= */}
 
           {currentTier ? (
 
@@ -861,7 +1108,11 @@ export default function ArmorPage() {
                           piece.type
                         }
 
-                        className="rounded-xl border border-white/10 bg-black/10 p-4"
+                        className={`rounded-xl border p-4 ${
+                          completed
+                            ? "border-white/5 bg-black/10 opacity-60"
+                            : "border-white/10 bg-black/10"
+                        }`}
                       >
 
                         <div className="flex items-center justify-between gap-3">
@@ -933,6 +1184,10 @@ export default function ArmorPage() {
 
               <p className="font-bold text-[#ead98c]">
                 All armor completed
+              </p>
+
+              <p className="mt-1 text-sm text-white/45">
+                Every Spaceplate, Spacepants and Spaceboots tier has been completed.
               </p>
 
             </div>
@@ -1087,6 +1342,97 @@ export default function ArmorPage() {
 
         </ArmorSection>
 
+        {/* =================================================
+            MATERIAL TOTALS
+
+            Styled the same way as Drills.
+            ================================================= */}
+
+        <MainSection
+          eyebrow="Materials"
+          title="Material Totals"
+
+          open={
+            state
+              .openSections
+              .totals
+          }
+
+          onToggle={() =>
+            toggleSection(
+              "totals"
+            )
+          }
+
+          borderClass="border-[#56734f]"
+          backgroundClass="bg-[#202a20]"
+          accentClass="text-[#a9cf9f]"
+          buttonClass="bg-[#30432d] text-[#b9dfaf]"
+        >
+
+          <div className="rounded-2xl border border-white/10 bg-black/10 p-4 md:p-5">
+
+            <div>
+
+              <h3 className="text-lg font-bold">
+                Remaining Materials
+              </h3>
+
+              <p className="mt-1 text-xs text-white/35">
+                Everything still required for armor pieces you have not completed.
+              </p>
+
+            </div>
+
+            {remainingMaterialTotals.length >
+            0 ? (
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+
+                {remainingMaterialTotals.map(
+                  (
+                    total
+                  ) => (
+
+                    <MaterialBox
+                      key={
+                        total.material
+                      }
+
+                      material={
+                        total.material
+                      }
+
+                      amount={
+                        total.amount
+                      }
+                    />
+
+                  )
+                )}
+
+              </div>
+
+            ) : (
+
+              <div className="mt-4 rounded-xl border border-white/10 bg-black/10 p-5 text-center">
+
+                <p className="font-semibold text-[#b9dfaf]">
+                  All armor completed
+                </p>
+
+                <p className="mt-1 text-sm text-white/35">
+                  You have no remaining armor materials.
+                </p>
+
+              </div>
+
+            )}
+
+          </div>
+
+        </MainSection>
+
       </div>
 
     </main>
@@ -1198,6 +1544,10 @@ function ArmorTierCard({
       }`}
     >
 
+      {/* ===================================================
+          HEADER
+          =================================================== */}
+
       <div className="flex items-start justify-between gap-3">
 
         <div className="min-w-0">
@@ -1244,6 +1594,10 @@ function ArmorTierCard({
         </button>
 
       </div>
+
+      {/* ===================================================
+          PIECES
+          =================================================== */}
 
       <div className="mt-4 space-y-3">
 
@@ -1338,6 +1692,10 @@ function ArmorTierCard({
 
       </div>
 
+      {/* ===================================================
+          TOTAL TIER COST
+          =================================================== */}
+
       <div className="mt-4 border-t border-white/10 pt-4">
 
         <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">
@@ -1366,7 +1724,8 @@ function ArmorTierCard({
                 </span>
 
                 <span className="font-semibold text-white/75">
-                  {formatNumber(
+                  {formatMaterialValue(
+                    total.material,
                     total.amount
                   )}
                 </span>
@@ -1397,10 +1756,6 @@ function ArmorTierCard({
 
 /* =========================================================
    REQUIREMENT DISPLAY
-
-   Exact same behaviour as Drills:
-   Plasma item -> underlying compacted item -> raw materials
-   all inside ONE expansion.
    ========================================================= */
 
 function RequirementDisplay({
@@ -1433,7 +1788,8 @@ function RequirementDisplay({
         </span>
 
         <span className="shrink-0 font-bold">
-          {formatNumber(
+          {formatMaterialValue(
+            requirement.material,
             requirement.amount
           )}
         </span>
@@ -1483,7 +1839,8 @@ function RequirementDisplay({
         <div className="flex shrink-0 items-center gap-3">
 
           <span className="text-sm font-bold">
-            {formatNumber(
+            {formatMaterialValue(
+              requirement.material,
               requirement.amount
             )}
           </span>
@@ -1552,7 +1909,8 @@ function RequirementDisplay({
                   </span>
 
                   <span className="shrink-0 font-semibold text-white/70">
-                    {formatNumber(
+                    {formatMaterialValue(
+                      ingredient.material,
                       ingredient.amount
                     )}
                   </span>
@@ -1581,6 +1939,41 @@ function RequirementDisplay({
         </div>
 
       )}
+
+    </div>
+
+  );
+}
+
+/* =========================================================
+   MATERIAL BOX
+
+   Same visual style as Drills Material Totals.
+   ========================================================= */
+
+function MaterialBox({
+  material,
+  amount,
+}: {
+  material: string;
+  amount: number;
+}) {
+  return (
+
+    <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+
+      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
+        {getMaterialLabel(
+          material
+        )}
+      </p>
+
+      <p className="mt-1 text-lg font-bold">
+        {formatMaterialValue(
+          material,
+          amount
+        )}
+      </p>
 
     </div>
 

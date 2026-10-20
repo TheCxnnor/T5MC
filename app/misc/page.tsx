@@ -12,7 +12,6 @@ import {
   o2Tanks,
   quickwarps,
   type MiscRequirement,
-  type O2Tank,
   type Quickwarp,
 } from "../../data/misc";
 
@@ -108,7 +107,7 @@ const MATERIAL_LABELS: Record<
     "Star-Shards",
 
   coinsT:
-    "T Coins",
+    "Coins",
 
   researchCore1:
     "Research Core 1★",
@@ -163,6 +162,28 @@ function getMaterialLabel(
       ) =>
         character.toUpperCase()
     );
+}
+
+/* =========================================================
+   MATERIAL VALUE FORMATTER
+   ========================================================= */
+
+function formatMaterialValue(
+  material: string,
+  amount: number
+) {
+  if (
+    material ===
+    "coinsT"
+  ) {
+    return `${formatNumber(
+      amount
+    )}T`;
+  }
+
+  return formatNumber(
+    amount
+  );
 }
 
 function addRequirements(
@@ -360,64 +381,6 @@ export default function MiscPage() {
       : 0;
 
   /* =======================================================
-     TOTAL MATERIALS
-     ======================================================= */
-
-  const allMaterialTotals =
-    useMemo(() => {
-      const totals =
-        new Map<
-          string,
-          number
-        >();
-
-      o2Tanks.forEach(
-        (
-          tank
-        ) => {
-          addRequirements(
-            totals,
-            tank.requirements
-          );
-        }
-      );
-
-      quickwarps.forEach(
-        (
-          quickwarp
-        ) => {
-          addRequirements(
-            totals,
-            quickwarp.requirements
-          );
-        }
-      );
-
-      miscItems.forEach(
-        (
-          item
-        ) => {
-          addRequirements(
-            totals,
-            item.requirements
-          );
-        }
-      );
-
-      return Array.from(
-        totals.entries()
-      ).map(
-        ([
-          material,
-          amount,
-        ]) => ({
-          material,
-          amount,
-        })
-      );
-    }, []);
-
-  /* =======================================================
      REMAINING MATERIALS
      ======================================================= */
 
@@ -492,10 +455,12 @@ export default function MiscPage() {
       return Array.from(
         totals.entries()
       ).map(
-        ([
-          material,
-          amount,
-        ]) => ({
+        (
+          [
+            material,
+            amount,
+          ]
+        ): MaterialTotal => ({
           material,
           amount,
         })
@@ -632,6 +597,7 @@ export default function MiscPage() {
         current
       ) => ({
         ...current,
+
         completed: [],
       })
     );
@@ -1056,23 +1022,64 @@ export default function MiscPage() {
           button="bg-[#30432d] text-[#b9dfaf]"
         >
 
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-black/10 p-4 md:p-5">
 
-            <MaterialTotals
-              title="Full Cost"
-              description="Every item on this page."
-              totals={
-                allMaterialTotals
-              }
-            />
+            <div>
 
-            <MaterialTotals
-              title="Remaining Cost"
-              description="Only items you have not marked complete."
-              totals={
-                remainingMaterialTotals
-              }
-            />
+              <h3 className="text-lg font-bold">
+                Remaining Materials
+              </h3>
+
+              <p className="mt-1 text-xs text-white/35">
+                Everything still required for items you have not marked complete.
+              </p>
+
+            </div>
+
+            {remainingMaterialTotals.length >
+            0 ? (
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+
+                {remainingMaterialTotals.map(
+                  (
+                    total
+                  ) => (
+
+                    <MaterialBox
+                      key={
+                        total.material
+                      }
+
+                      material={
+                        total.material
+                      }
+
+                      amount={
+                        total.amount
+                      }
+                    />
+
+                  )
+                )}
+
+              </div>
+
+            ) : (
+
+              <div className="mt-4 rounded-xl border border-white/10 bg-black/10 p-5 text-center">
+
+                <p className="font-semibold text-[#b9dfaf]">
+                  Everything completed
+                </p>
+
+                <p className="mt-1 text-sm text-white/35">
+                  You have no remaining materials on this page.
+                </p>
+
+              </div>
+
+            )}
 
           </div>
 
@@ -1275,7 +1282,8 @@ function RequirementRow({
       </span>
 
       <span className="shrink-0 font-bold">
-        {formatNumber(
+        {formatMaterialValue(
+          requirement.material,
           requirement.amount
         )}
       </span>
@@ -1286,74 +1294,34 @@ function RequirementRow({
 }
 
 /* =========================================================
-   MATERIAL TOTALS
+   MATERIAL BOX
+
+   Same visual style used on Drills and Armor.
    ========================================================= */
 
-function MaterialTotals({
-  title,
-  description,
-  totals,
+function MaterialBox({
+  material,
+  amount,
 }: {
-  title: string;
-  description: string;
-  totals: MaterialTotal[];
+  material: string;
+  amount: number;
 }) {
   return (
 
-    <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+    <div className="rounded-xl border border-white/10 bg-black/10 p-3">
 
-      <h3 className="text-lg font-bold">
-        {title}
-      </h3>
-
-      <p className="mt-1 text-xs text-white/35">
-        {description}
+      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
+        {getMaterialLabel(
+          material
+        )}
       </p>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-
-        {totals.length >
-        0 ? (
-
-          totals.map(
-            (
-              total
-            ) => (
-
-              <div
-                key={
-                  total.material
-                }
-
-                className="flex items-center justify-between gap-3 rounded-lg bg-black/10 px-3 py-2 text-xs"
-              >
-
-                <span className="text-white/55">
-                  {getMaterialLabel(
-                    total.material
-                  )}
-                </span>
-
-                <span className="font-bold">
-                  {formatNumber(
-                    total.amount
-                  )}
-                </span>
-
-              </div>
-
-            )
-          )
-
-        ) : (
-
-          <div className="col-span-full rounded-lg bg-black/10 px-3 py-4 text-center text-sm text-white/35">
-            Nothing remaining.
-          </div>
-
+      <p className="mt-1 text-lg font-bold">
+        {formatMaterialValue(
+          material,
+          amount
         )}
-
-      </div>
+      </p>
 
     </div>
 
@@ -1489,7 +1457,7 @@ function GroupSection({
 }
 
 /* =========================================================
-   GENERIC COLLAPSIBLE SECTION
+   COLLAPSIBLE SECTION
    ========================================================= */
 
 function CollapsibleSection({

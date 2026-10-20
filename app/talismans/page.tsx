@@ -29,6 +29,7 @@ type OpenSections = {
   moon: boolean;
   mars: boolean;
   sun: boolean;
+  totals: boolean;
 };
 
 type SavedState = {
@@ -65,6 +66,7 @@ const DEFAULT_OPEN_SECTIONS: OpenSections = {
   moon: true,
   mars: true,
   sun: true,
+  totals: false,
 };
 
 const DEFAULT_STATE: SavedState = {
@@ -85,7 +87,7 @@ const MATERIAL_LABELS: Record<
     "Star-Shards",
 
   coinsQd:
-    "Qd Coins",
+    "Coins",
 
   lunarFragment:
     "Lunar Fragment",
@@ -157,6 +159,24 @@ function formatNumber(
   );
 }
 
+function formatMaterialValue(
+  material: string,
+  amount: number
+) {
+  if (
+    material ===
+    "coinsQd"
+  ) {
+    return `${formatNumber(
+      amount
+    )}Qd`;
+  }
+
+  return formatNumber(
+    amount
+  );
+}
+
 function formatHours(
   value: number
 ) {
@@ -222,8 +242,6 @@ function getRegionLabel(
 
 /* =========================================================
    COMPACTED ITEM HELPERS
-
-   Same implementation as Drills.
    ========================================================= */
 
 function getDirectCompactedItem(
@@ -535,6 +553,68 @@ export default function TalismansPage() {
     ]);
 
   /* =======================================================
+     REMAINING MATERIAL TOTALS
+     ======================================================= */
+
+  const remainingMaterialTotals =
+    useMemo(() => {
+      const totals =
+        new Map<
+          string,
+          number
+        >();
+
+      talismans
+        .filter(
+          (
+            talisman
+          ) =>
+            !obtainedSet.has(
+              talisman.id
+            )
+        )
+        .forEach(
+          (
+            talisman
+          ) => {
+            talisman.requirements.forEach(
+              (
+                requirement
+              ) => {
+                totals.set(
+                  requirement.material,
+
+                  (
+                    totals.get(
+                      requirement.material
+                    ) ??
+                    0
+                  ) +
+                    requirement.amount
+                );
+              }
+            );
+          }
+        );
+
+      return Array.from(
+        totals.entries()
+      ).map(
+        (
+          [
+            material,
+            amount,
+          ]
+        ): MaterialTotal => ({
+          material,
+          amount,
+        })
+      );
+    }, [
+      obtainedSet,
+    ]);
+
+  /* =======================================================
      TOGGLE TALISMAN
      ======================================================= */
 
@@ -678,6 +758,7 @@ export default function TalismansPage() {
         current
       ) => ({
         ...current,
+
         obtained: [],
       })
     );
@@ -1104,6 +1185,95 @@ export default function TalismansPage() {
 
         </TalismanSection>
 
+        {/* =================================================
+            MATERIAL TOTALS
+            ================================================= */}
+
+        <MainSection
+          eyebrow="Materials"
+          title="Material Totals"
+
+          open={
+            state
+              .openSections
+              .totals
+          }
+
+          onToggle={() =>
+            toggleSection(
+              "totals"
+            )
+          }
+
+          borderClass="border-[#56734f]"
+          backgroundClass="bg-[#202a20]"
+          accentClass="text-[#a9cf9f]"
+          buttonClass="bg-[#30432d] text-[#b9dfaf]"
+        >
+
+          <div className="rounded-2xl border border-white/10 bg-black/10 p-4 md:p-5">
+
+            <div>
+
+              <h3 className="text-lg font-bold">
+                Remaining Materials
+              </h3>
+
+              <p className="mt-1 text-xs text-white/35">
+                Everything still required for talismans you have not obtained.
+              </p>
+
+            </div>
+
+            {remainingMaterialTotals.length >
+            0 ? (
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+
+                {remainingMaterialTotals.map(
+                  (
+                    total
+                  ) => (
+
+                    <MaterialBox
+                      key={
+                        total.material
+                      }
+
+                      material={
+                        total.material
+                      }
+
+                      amount={
+                        total.amount
+                      }
+                    />
+
+                  )
+                )}
+
+              </div>
+
+            ) : (
+
+              <div className="mt-4 rounded-xl border border-white/10 bg-black/10 p-5 text-center">
+
+                <p className="font-semibold text-[#b9dfaf]">
+                  All talismans obtained
+                </p>
+
+                <p className="mt-1 text-sm text-white/35">
+                  You have no remaining talisman materials.
+                </p>
+
+              </div>
+
+            )}
+
+          </div>
+
+        </MainSection>
+
       </div>
 
     </main>
@@ -1201,8 +1371,6 @@ function TalismanCard({
 
 /* =========================================================
    REQUIREMENT DISPLAY
-
-   Exact same working layout as Drills.
    ========================================================= */
 
 function RequirementDisplay({
@@ -1235,7 +1403,8 @@ function RequirementDisplay({
         </span>
 
         <span className="shrink-0 font-bold">
-          {formatNumber(
+          {formatMaterialValue(
+            requirement.material,
             requirement.amount
           )}
         </span>
@@ -1285,7 +1454,8 @@ function RequirementDisplay({
         <div className="flex shrink-0 items-center gap-3">
 
           <span className="text-sm font-bold">
-            {formatNumber(
+            {formatMaterialValue(
+              requirement.material,
               requirement.amount
             )}
           </span>
@@ -1354,7 +1524,8 @@ function RequirementDisplay({
                   </span>
 
                   <span className="shrink-0 font-semibold text-white/70">
-                    {formatNumber(
+                    {formatMaterialValue(
+                      ingredient.material,
                       ingredient.amount
                     )}
                   </span>
@@ -1383,6 +1554,39 @@ function RequirementDisplay({
         </div>
 
       )}
+
+    </div>
+
+  );
+}
+
+/* =========================================================
+   MATERIAL BOX
+   ========================================================= */
+
+function MaterialBox({
+  material,
+  amount,
+}: {
+  material: string;
+  amount: number;
+}) {
+  return (
+
+    <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+
+      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
+        {getMaterialLabel(
+          material
+        )}
+      </p>
+
+      <p className="mt-1 text-lg font-bold">
+        {formatMaterialValue(
+          material,
+          amount
+        )}
+      </p>
 
     </div>
 
