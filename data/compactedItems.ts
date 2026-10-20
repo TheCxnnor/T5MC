@@ -190,9 +190,19 @@ export const plasmaCompactedItems: Record<
   plasmaCompactedSolarAlloy:
     "compactedSolarAlloy",
 
+  plasmaCompactedStarShards:
+    "compactedStarShards",
+
+  plasmaCompactedCoins:
+    "compactedCoins",
+
   plasmaCompactedMagma:
     "compactedMagma",
 };
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
 
 export function getCompactedItem(
   id: string

@@ -81,6 +81,13 @@ export default function RootLayout({
               >
                 Talismans
               </Link>
+
+              <Link
+                href="/misc"
+                className="rounded-lg px-3 py-2 text-[#c8d0d8] transition hover:bg-[#343b43] hover:text-white"
+              >
+                Misc
+              </Link>
             </nav>
           </div>
         </header>
