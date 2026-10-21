@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "T5 Mission Control",
@@ -95,6 +96,7 @@ export default function RootLayout({
         {children}
 
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
