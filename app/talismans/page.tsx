@@ -15,10 +15,14 @@ import {
 } from "../../data/talismans";
 
 import {
-  compactedItems,
-  getUnderlyingCompactedItem,
-  type CompactedItem,
-} from "../../data/compactedItems";
+  getExpandedRequirement,
+  getMaterialLabel,
+} from "../../lib/materials";
+import { formatHours, formatMaterialValue, formatNumber } from "../../lib/format";
+import { CollapsibleSection as MainSection, GroupSection } from "../../components/ui/CollapsibleSection";
+import { OverviewStat } from "../../components/ui/StatCards";
+import { MaterialTotals } from "../../components/ui/MaterialTotals";
+import { getMaterialSummary } from "../../lib/materialTotals";
 
 /* =========================================================
    TYPES
@@ -35,19 +39,6 @@ type OpenSections = {
 type SavedState = {
   obtained: string[];
   openSections: OpenSections;
-};
-
-type MaterialTotal = {
-  material: string;
-  amount: number;
-};
-
-type ExpandedRequirement = {
-  compactedItem: CompactedItem;
-  isPlasma: boolean;
-  amount: number;
-  ingredients: MaterialTotal[];
-  timeHours: number;
 };
 
 /* =========================================================
@@ -76,149 +67,8 @@ const DEFAULT_STATE: SavedState = {
 };
 
 /* =========================================================
-   MATERIAL LABELS
-   ========================================================= */
-
-const MATERIAL_LABELS: Record<
-  string,
-  string
-> = {
-  starShards:
-    "Star-Shards",
-
-  coinsQd:
-    "Coins",
-
-  lunarFragment:
-    "Lunar Fragment",
-
-  chisiliteShard:
-    "Chisilite Shard",
-
-  basaltShard:
-    "Basalt Shard",
-
-  breccaPowder:
-    "Brecca Powder",
-
-  martianDust:
-    "Martian Dust",
-
-  rhodnite:
-    "Rhodnite",
-
-  amberFragment:
-    "Amber Fragment",
-
-  ametrine:
-    "Ametrine",
-
-  sunFragment:
-    "Sun Fragment",
-
-  plasmaShard:
-    "Plasma Shard",
-
-  fiber:
-    "Fiber",
-
-  solarEmberFlare:
-    "Solar Ember Flare",
-
-  radiantNovaFlare:
-    "Radiant Nova Flare",
-
-  compactedSolarAlloy:
-    "Compacted Solar Alloy",
-
-  compactedStarShards:
-    "Compacted Star Shards",
-
-  plasmaCompactedStarShards:
-    "Plasma Compacted Star Shards",
-
-  compactedCoins:
-    "Compacted Coins",
-
-  plasmaCompactedCoins:
-    "Plasma Compacted Coins",
-};
-
-/* =========================================================
    HELPERS
    ========================================================= */
-
-function formatNumber(
-  value: number
-) {
-  return value.toLocaleString(
-    undefined,
-    {
-      maximumFractionDigits: 2,
-    }
-  );
-}
-
-function formatMaterialValue(
-  material: string,
-  amount: number
-) {
-  if (
-    material ===
-    "coinsQd"
-  ) {
-    return `${formatNumber(
-      amount
-    )}Qd`;
-  }
-
-  return formatNumber(
-    amount
-  );
-}
-
-function formatHours(
-  value: number
-) {
-  if (
-    Number.isInteger(
-      value
-    )
-  ) {
-    return `${value}h`;
-  }
-
-  return `${formatNumber(
-    value
-  )}h`;
-}
-
-function getMaterialLabel(
-  material: string
-) {
-  if (
-    MATERIAL_LABELS[
-      material
-    ]
-  ) {
-    return MATERIAL_LABELS[
-      material
-    ];
-  }
-
-  return material
-    .replace(
-      /([A-Z])/g,
-      " $1"
-    )
-    .replace(
-      /^./,
-      (
-        character
-      ) =>
-        character.toUpperCase()
-    );
-}
 
 function getRegionLabel(
   region: TalismanRegion
@@ -238,104 +88,6 @@ function getRegionLabel(
   }
 
   return "Sun";
-}
-
-/* =========================================================
-   COMPACTED ITEM HELPERS
-   ========================================================= */
-
-function getDirectCompactedItem(
-  material: string
-) {
-  return compactedItems.find(
-    (
-      item
-    ) =>
-      item.id ===
-      material
-  );
-}
-
-function getExpandedRequirement(
-  requirement: TalismanRequirement
-): ExpandedRequirement | null {
-  const direct =
-    getDirectCompactedItem(
-      requirement.material
-    );
-
-  if (
-    direct
-  ) {
-    return {
-      compactedItem:
-        direct,
-
-      isPlasma:
-        false,
-
-      amount:
-        requirement.amount,
-
-      ingredients:
-        direct.requirements.map(
-          (
-            ingredient
-          ) => ({
-            material:
-              ingredient.material,
-
-            amount:
-              ingredient.amount *
-              requirement.amount,
-          })
-        ),
-
-      timeHours:
-        direct.timeHours *
-        requirement.amount,
-    };
-  }
-
-  const underlying =
-    getUnderlyingCompactedItem(
-      requirement.material
-    );
-
-  if (
-    underlying
-  ) {
-    return {
-      compactedItem:
-        underlying,
-
-      isPlasma:
-        true,
-
-      amount:
-        requirement.amount,
-
-      ingredients:
-        underlying.requirements.map(
-          (
-            ingredient
-          ) => ({
-            material:
-              ingredient.material,
-
-            amount:
-              ingredient.amount *
-              requirement.amount,
-          })
-        ),
-
-      timeHours:
-        underlying.timeHours *
-        requirement.amount,
-    };
-  }
-
-  return null;
 }
 
 /* =========================================================
@@ -556,63 +308,11 @@ export default function TalismansPage() {
      REMAINING MATERIAL TOTALS
      ======================================================= */
 
-  const remainingMaterialTotals =
-    useMemo(() => {
-      const totals =
-        new Map<
-          string,
-          number
-        >();
-
-      talismans
-        .filter(
-          (
-            talisman
-          ) =>
-            !obtainedSet.has(
-              talisman.id
-            )
-        )
-        .forEach(
-          (
-            talisman
-          ) => {
-            talisman.requirements.forEach(
-              (
-                requirement
-              ) => {
-                totals.set(
-                  requirement.material,
-
-                  (
-                    totals.get(
-                      requirement.material
-                    ) ??
-                    0
-                  ) +
-                    requirement.amount
-                );
-              }
-            );
-          }
-        );
-
-      return Array.from(
-        totals.entries()
-      ).map(
-        (
-          [
-            material,
-            amount,
-          ]
-        ): MaterialTotal => ({
-          material,
-          amount,
-        })
-      );
-    }, [
-      obtainedSet,
-    ]);
+  const remainingMaterialTotals = useMemo(
+    () => getMaterialSummary(talismans.filter(talisman => !obtainedSet.has(talisman.id))
+      .flatMap(talisman => talisman.requirements)),
+    [obtainedSet]
+  );
 
   /* =======================================================
      TOGGLE TALISMAN
@@ -1211,66 +911,11 @@ export default function TalismansPage() {
           buttonClass="bg-[#30432d] text-[#b9dfaf]"
         >
 
-          <div className="rounded-2xl border border-white/10 bg-black/10 p-4 md:p-5">
-
-            <div>
-
-              <h3 className="text-lg font-bold">
-                Remaining Materials
-              </h3>
-
-              <p className="mt-1 text-xs text-white/35">
-                Everything still required for talismans you have not obtained.
-              </p>
-
-            </div>
-
-            {remainingMaterialTotals.length >
-            0 ? (
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
-                {remainingMaterialTotals.map(
-                  (
-                    total
-                  ) => (
-
-                    <MaterialBox
-                      key={
-                        total.material
-                      }
-
-                      material={
-                        total.material
-                      }
-
-                      amount={
-                        total.amount
-                      }
-                    />
-
-                  )
-                )}
-
-              </div>
-
-            ) : (
-
-              <div className="mt-4 rounded-xl border border-white/10 bg-black/10 p-5 text-center">
-
-                <p className="font-semibold text-[#b9dfaf]">
-                  All talismans obtained
-                </p>
-
-                <p className="mt-1 text-sm text-white/35">
-                  You have no remaining talisman materials.
-                </p>
-
-              </div>
-
-            )}
-
-          </div>
+          <MaterialTotals
+            summary={remainingMaterialTotals}
+            description="Cumulative requirements for every talisman you have not obtained."
+            emptyMessage="All talismans completed. You have no remaining talisman materials."
+          />
 
         </MainSection>
 
@@ -1560,38 +1205,7 @@ function RequirementDisplay({
   );
 }
 
-/* =========================================================
-   MATERIAL BOX
-   ========================================================= */
 
-function MaterialBox({
-  material,
-  amount,
-}: {
-  material: string;
-  amount: number;
-}) {
-  return (
-
-    <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
-        {getMaterialLabel(
-          material
-        )}
-      </p>
-
-      <p className="mt-1 text-lg font-bold">
-        {formatMaterialValue(
-          material,
-          amount
-        )}
-      </p>
-
-    </div>
-
-  );
-}
 
 /* =========================================================
    TALISMAN SECTION
@@ -1616,217 +1230,31 @@ function TalismanSection({
   onToggleAll: () => void;
   children: ReactNode;
 }) {
-  const theme =
-    getRegionTheme(
-      region
-    );
-
-  const allComplete =
-    completed ===
-    total;
+  const theme = getRegionTheme(region);
 
   return (
-
-    <section
-      className={`mb-6 overflow-hidden rounded-2xl border ${theme.border} ${theme.background}`}
+    <GroupSection
+      eyebrow={getRegionLabel(region)}
+      title={title}
+      open={open}
+      onToggle={onToggle}
+      completed={completed}
+      total={total}
+      onToggleAll={onToggleAll}
+      border={theme.border}
+      background={theme.background}
+      accent={theme.accent}
+      badge={theme.badge}
+      button={theme.button}
+      checkbox={theme.checkbox}
+      checkboxClassName="flex h-8 w-8 items-center justify-center rounded-md border text-sm font-bold transition"
+      uncheckedClassName="border-white/20 bg-black/10 text-transparent hover:border-white/40"
     >
-
-      <div className="flex items-center justify-between gap-4 px-5 py-5 md:px-6">
-
-        <button
-          type="button"
-
-          onClick={
-            onToggle
-          }
-
-          className="min-w-0 flex-1 text-left"
-        >
-
-          <p
-            className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${theme.accent}`}
-          >
-            {getRegionLabel(
-              region
-            )}
-          </p>
-
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-
-            <h2 className="text-2xl font-bold">
-              {title}
-            </h2>
-
-            <span
-              className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${theme.badge}`}
-            >
-              {completed} / {total}
-            </span>
-
-          </div>
-
-        </button>
-
-        <div className="flex shrink-0 items-center gap-3">
-
-          <button
-            type="button"
-
-            onClick={
-              onToggleAll
-            }
-
-            className={`flex h-8 w-8 items-center justify-center rounded-md border text-sm font-bold transition ${
-              allComplete
-                ? `${theme.checkbox} border-transparent`
-                : "border-white/20 bg-black/10 text-transparent hover:border-white/40"
-            }`}
-          >
-            ✓
-          </button>
-
-          <button
-            type="button"
-
-            onClick={
-              onToggle
-            }
-
-            className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl font-bold ${theme.button}`}
-          >
-            {open
-              ? "−"
-              : "+"}
-          </button>
-
-        </div>
-
-      </div>
-
-      {open && (
-
-        <div className="border-t border-white/10 p-4 md:p-5">
-          {children}
-        </div>
-
-      )}
-
-    </section>
-
+      {children}
+    </GroupSection>
   );
 }
 
-/* =========================================================
-   MAIN SECTION
-   ========================================================= */
-
-function MainSection({
-  eyebrow,
-  title,
-  open,
-  onToggle,
-  borderClass,
-  backgroundClass,
-  accentClass,
-  buttonClass,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  borderClass: string;
-  backgroundClass: string;
-  accentClass: string;
-  buttonClass: string;
-  children: ReactNode;
-}) {
-  return (
-
-    <section
-      className={`mb-6 overflow-hidden rounded-2xl border ${borderClass} ${backgroundClass}`}
-    >
-
-      <button
-        type="button"
-
-        onClick={
-          onToggle
-        }
-
-        className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left md:px-6"
-      >
-
-        <div>
-
-          <p
-            className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${accentClass}`}
-          >
-            {eyebrow}
-          </p>
-
-          <h2 className="mt-2 text-2xl font-bold">
-            {title}
-          </h2>
-
-        </div>
-
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl font-bold ${buttonClass}`}
-        >
-          {open
-            ? "−"
-            : "+"}
-        </span>
-
-      </button>
-
-      {open && (
-
-        <div className="border-t border-white/10 p-5 md:p-6">
-          {children}
-        </div>
-
-      )}
-
-    </section>
-
-  );
-}
-
-/* =========================================================
-   OVERVIEW STAT
-   ========================================================= */
-
-function OverviewStat({
-  label,
-  value,
-  description,
-}: {
-  label: string;
-  value: string;
-  description: string;
-}) {
-  return (
-
-    <div className="rounded-xl border border-white/10 bg-black/10 p-4">
-
-      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">
-        {label}
-      </p>
-
-      <p className="mt-2 break-words text-xl font-bold">
-        {value}
-      </p>
-
-      <p className="mt-1 text-xs text-white/30">
-        {description}
-      </p>
-
-    </div>
-
-  );
-}
 
 /* =========================================================
    REGION BADGE

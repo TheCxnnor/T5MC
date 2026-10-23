@@ -1,18 +1,27 @@
 "use client";
-
 import {
   useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-
 import {
   progressionCores,
   type ProgressionCore,
   type CoreCost,
   type CoreLevel,
 } from "../../data/coreProgression";
+import {
+  canonicalCoreName,
+  combineCosts,
+  getCoreRecipe,
+  getRecursiveCoreDependencies,
+  getRecursiveRawMaterials,
+  prepareDisplayCosts,
+  type CoreRecipe,
+} from "../../lib/coreRecipes";
+import { MaterialTotals } from "../../components/ui/MaterialTotals";
+import { getCoreMaterialSummary } from "../../lib/materialTotals";
 
 type Region = "moon" | "mars" | "sun";
 
@@ -22,6 +31,7 @@ type OpenSections = {
   moon: boolean;
   mars: boolean;
   sun: boolean;
+  totals: boolean;
 };
 
 type DisplayCoreLevel = CoreLevel & {
@@ -56,11 +66,6 @@ type SavedCoreState = {
   openSections: OpenSections;
 };
 
-type CoreRecipe = {
-  name: string;
-  ingredients: CoreCost[];
-};
-
 const STORAGE_KEY = "t5-mission-control-cores";
 
 const defaultOpenSections: OpenSections = {
@@ -69,6 +74,7 @@ const defaultOpenSections: OpenSections = {
   moon: true,
   mars: true,
   sun: true,
+  totals: false,
 };
 
 const magmaStages = [
@@ -84,111 +90,6 @@ const magmaStages = [
   { storage: 7500, nextCost: 128 },
   { storage: 10000, nextCost: 0 },
 ];
-
-const coreRecipes: Record<string, CoreRecipe> = {
-  "1★ Research Core": {
-    name: "1★ Research Core",
-    ingredients: [
-      { name: "Lunar Fragment", amount: 16 },
-      { name: "Chisilite Shard", amount: 8 },
-      { name: "Magma", amount: 500 },
-    ],
-  },
-
-  "2★ Research Core": {
-    name: "2★ Research Core",
-    ingredients: [
-      { name: "1★ Research Core", amount: 1 },
-      { name: "Amber Fragment", amount: 16 },
-      { name: "Martian Dust", amount: 8 },
-      { name: "Magma", amount: 1000 },
-    ],
-  },
-
-  "3★ Research Core": {
-    name: "3★ Research Core",
-    ingredients: [
-      { name: "2★ Research Core", amount: 1 },
-      { name: "Sun Fragment", amount: 16 },
-      { name: "Plasma Shard", amount: 8 },
-      { name: "Magma", amount: 2000 },
-    ],
-  },
-
-  "Power Core 1★": {
-    name: "Power Core 1★",
-    ingredients: [
-      { name: "Lunar Fragment", amount: 8 },
-      { name: "Chisilite Shard", amount: 4 },
-      { name: "Magma", amount: 250 },
-    ],
-  },
-
-  "Power Core 2★": {
-    name: "Power Core 2★",
-    ingredients: [
-      { name: "Power Core 1★", amount: 1 },
-      { name: "Amber Fragment", amount: 8 },
-      { name: "Martian Dust", amount: 4 },
-      { name: "Magma", amount: 500 },
-    ],
-  },
-
-  "1★ Beacon Core": {
-    name: "1★ Beacon Core",
-    ingredients: [
-      { name: "Lunar Fragment", amount: 8 },
-      { name: "Chisilite Shard", amount: 4 },
-      { name: "Magma", amount: 250 },
-    ],
-  },
-
-  "2★ Beacon Core": {
-    name: "2★ Beacon Core",
-    ingredients: [
-      { name: "1★ Beacon Core", amount: 1 },
-      { name: "Amber Fragment", amount: 8 },
-      { name: "Martian Dust", amount: 4 },
-      { name: "Magma", amount: 500 },
-    ],
-  },
-
-  "3★ Beacon Core": {
-    name: "3★ Beacon Core",
-    ingredients: [
-      { name: "2★ Beacon Core", amount: 1 },
-      { name: "Sun Fragment", amount: 8 },
-      { name: "Plasma Shard", amount: 4 },
-      { name: "Magma", amount: 1000 },
-    ],
-  },
-
-  "Molten Core": {
-    name: "Molten Core",
-    ingredients: [
-      { name: "Chisilite Shard", amount: 8 },
-      { name: "Amber Fragment", amount: 4 },
-      { name: "Magma", amount: 500 },
-    ],
-  },
-};
-
-function canonicalCoreName(name: string) {
-  const aliases: Record<string, string> = {
-    "Research Core 1★": "1★ Research Core",
-    "Research Core 2★": "2★ Research Core",
-    "Research Core 3★": "3★ Research Core",
-    "Beacon Core 1★": "1★ Beacon Core",
-    "Beacon Core 2★": "2★ Beacon Core",
-    "Beacon Core 3★": "3★ Beacon Core",
-  };
-
-  return aliases[name] ?? name;
-}
-
-function getCoreRecipe(name: string) {
-  return coreRecipes[canonicalCoreName(name)];
-}
 
 function formatNumber(value: number) {
   return value.toLocaleString();
@@ -391,6 +292,21 @@ function getMagmaTheme(): Theme {
   };
 }
 
+function getTotalsTheme(): Theme {
+  return {
+    ...getMoonTheme(),
+    sectionBorder: "border-[#56734f]",
+    sectionBg: "bg-[#202a20]",
+    sectionGlow:
+      "shadow-[0_0_0_1px_rgba(86,115,79,0.12)]",
+    badgeText: "text-[#a9cf9f]",
+    badgeBg: "bg-[#30432d]",
+    collapseBtn:
+      "bg-[#30432d] hover:bg-[#3b5136]",
+    collapseBtnText: "text-[#b9dfaf]",
+  };
+}
+
 function getRegionTheme(region: Region): Theme {
   if (region === "moon") {
     return getMoonTheme();
@@ -401,23 +317,6 @@ function getRegionTheme(region: Region): Theme {
   }
 
   return getSunTheme();
-}
-
-function combineCosts(costs: CoreCost[]) {
-  const totals: Record<string, number> = {};
-
-  for (const cost of costs) {
-    totals[cost.name] =
-      (totals[cost.name] ?? 0) +
-      cost.amount;
-  }
-
-  return Object.entries(totals).map(
-    ([name, amount]) => ({
-      name,
-      amount,
-    })
-  );
 }
 
 function getRemainingCosts(
@@ -484,329 +383,6 @@ function getProgressPercent(
   );
 }
 
-function getRecursiveCoreDependencies(
-  coreName: string,
-  quantity: number,
-  result: Record<string, number> = {}
-) {
-  const recipe =
-    getCoreRecipe(coreName);
-
-  if (!recipe) {
-    return result;
-  }
-
-  for (const ingredient of recipe.ingredients) {
-    const ingredientRecipe =
-      getCoreRecipe(ingredient.name);
-
-    if (!ingredientRecipe) {
-      continue;
-    }
-
-    const canonical =
-      canonicalCoreName(
-        ingredient.name
-      );
-
-    const amount =
-      ingredient.amount *
-      quantity;
-
-    result[canonical] =
-      (result[canonical] ?? 0) +
-      amount;
-
-    getRecursiveCoreDependencies(
-      canonical,
-      amount,
-      result
-    );
-  }
-
-  return result;
-}
-
-function getRecursiveRawMaterials(
-  coreName: string,
-  quantity: number,
-  result: Record<string, number> = {}
-) {
-  const recipe =
-    getCoreRecipe(coreName);
-
-  if (!recipe) {
-    return result;
-  }
-
-  for (const ingredient of recipe.ingredients) {
-    const amount =
-      ingredient.amount *
-      quantity;
-
-    if (
-      getCoreRecipe(
-        ingredient.name
-      )
-    ) {
-      getRecursiveRawMaterials(
-        ingredient.name,
-        amount,
-        result
-      );
-    } else {
-      result[ingredient.name] =
-        (result[ingredient.name] ?? 0) +
-        amount;
-    }
-  }
-
-  return result;
-}
-
-function prepareDisplayCosts(
-  costs: CoreCost[]
-): CoreCost[] {
-  if (costs.length === 0) {
-    return [];
-  }
-
-  const combined =
-    combineCosts(costs);
-
-  const coreAmounts: Record<
-    string,
-    number
-  > = {};
-
-  for (const cost of combined) {
-    if (
-      !getCoreRecipe(
-        cost.name
-      )
-    ) {
-      continue;
-    }
-
-    const canonical =
-      canonicalCoreName(
-        cost.name
-      );
-
-    coreAmounts[canonical] =
-      (coreAmounts[
-        canonical
-      ] ?? 0) +
-      cost.amount;
-  }
-
-  const coreNames =
-    Object.keys(
-      coreAmounts
-    );
-
-  const dependentCoreNames =
-    new Set<string>();
-
-  for (const name of coreNames) {
-    const dependencies =
-      getRecursiveCoreDependencies(
-        name,
-        1
-      );
-
-    for (const dependencyName of Object.keys(
-      dependencies
-    )) {
-      if (
-        coreAmounts[
-          dependencyName
-        ] !== undefined
-      ) {
-        dependentCoreNames.add(
-          dependencyName
-        );
-      }
-    }
-  }
-
-  const visibleCoreAmounts = {
-    ...coreAmounts,
-  };
-
-  const rootCoreNames =
-    coreNames.filter(
-      (name) =>
-        !dependentCoreNames.has(
-          name
-        )
-    );
-
-  for (const rootName of rootCoreNames) {
-    const rootQuantity =
-      coreAmounts[rootName];
-
-    const dependencies =
-      getRecursiveCoreDependencies(
-        rootName,
-        rootQuantity
-      );
-
-    for (const [
-      dependencyName,
-      dependencyAmount,
-    ] of Object.entries(
-      dependencies
-    )) {
-      if (
-        visibleCoreAmounts[
-          dependencyName
-        ] === undefined
-      ) {
-        continue;
-      }
-
-      visibleCoreAmounts[
-        dependencyName
-      ] = Math.max(
-        0,
-        visibleCoreAmounts[
-          dependencyName
-        ] -
-          dependencyAmount
-      );
-    }
-  }
-
-  const representedRawMaterials: Record<
-    string,
-    number
-  > = {};
-
-  for (const [
-    coreName,
-    quantity,
-  ] of Object.entries(
-    visibleCoreAmounts
-  )) {
-    if (quantity <= 0) {
-      continue;
-    }
-
-    getRecursiveRawMaterials(
-      coreName,
-      quantity,
-      representedRawMaterials
-    );
-  }
-
-  const rawRemaining = {
-    ...representedRawMaterials,
-  };
-
-  const coreOutput: CoreCost[] =
-    [];
-
-  const addedCores =
-    new Set<string>();
-
-  for (const cost of combined) {
-    if (
-      !getCoreRecipe(
-        cost.name
-      )
-    ) {
-      continue;
-    }
-
-    const canonical =
-      canonicalCoreName(
-        cost.name
-      );
-
-    if (
-      addedCores.has(
-        canonical
-      )
-    ) {
-      continue;
-    }
-
-    addedCores.add(
-      canonical
-    );
-
-    const amount =
-      visibleCoreAmounts[
-        canonical
-      ] ?? 0;
-
-    if (amount <= 0) {
-      continue;
-    }
-
-    coreOutput.push({
-      name: canonical,
-      amount,
-    });
-  }
-
-  const materialOutput: CoreCost[] =
-    [];
-
-  for (const cost of combined) {
-    if (
-      getCoreRecipe(
-        cost.name
-      )
-    ) {
-      continue;
-    }
-
-    const represented =
-      rawRemaining[
-        cost.name
-      ] ?? 0;
-
-    if (
-      represented <= 0
-    ) {
-      materialOutput.push(
-        cost
-      );
-      continue;
-    }
-
-    const amountUsed =
-      Math.min(
-        represented,
-        cost.amount
-      );
-
-    const leftover =
-      cost.amount -
-      amountUsed;
-
-    rawRemaining[
-      cost.name
-    ] =
-      represented -
-      amountUsed;
-
-    if (leftover > 0) {
-      materialOutput.push({
-        name: cost.name,
-        amount: leftover,
-      });
-    }
-  }
-
-  return [
-    ...coreOutput,
-    ...materialOutput,
-  ];
-}
-
 function multiplyRecipe(
   recipe: CoreRecipe,
   quantity: number
@@ -819,6 +395,59 @@ function multiplyRecipe(
         quantity,
     })
   );
+}
+
+function getMaterialTotals(
+  selectedLevels: Record<string, number>,
+  remainingMagmaCores: number
+) {
+  const required: CoreCost[] = [];
+
+  for (const core of progressionCores) {
+    const selectedLevel =
+      selectedLevels[core.id] ?? core.levels[0]?.level ?? 0;
+
+    for (const level of core.levels) {
+      if (level.level < selectedLevel) {
+        continue;
+      }
+
+      // Normalize each upgrade's recipe breakdown before combining upgrades.
+      // Independent Moon and Mars requirements must not cancel Sun ingredients.
+      required.push(...prepareDisplayCosts(level.nextCost));
+    }
+  }
+
+  if (remainingMagmaCores > 0) {
+    required.push({ name: "Molten Core", amount: remainingMagmaCores });
+  }
+
+  const craftedCoreAmounts: Record<string, number> = {};
+  const raw: Record<string, number> = {};
+
+  for (const cost of combineCosts(required)) {
+    if (getCoreRecipe(cost.name)) {
+      const canonical = canonicalCoreName(cost.name);
+      craftedCoreAmounts[canonical] =
+        (craftedCoreAmounts[canonical] ?? 0) + cost.amount;
+
+      // Include lower-star crafting steps while expanding raw ingredients once.
+      getRecursiveCoreDependencies(canonical, cost.amount, craftedCoreAmounts);
+      getRecursiveRawMaterials(canonical, cost.amount, raw);
+    } else {
+      raw[cost.name] = (raw[cost.name] ?? 0) + cost.amount;
+    }
+  }
+
+  return {
+    craftedCores: Object.entries(craftedCoreAmounts)
+      .filter(([, amount]) => amount > 0)
+      .map(([name, amount]) => ({ name, amount })),
+    rawMaterials: Object.entries(raw)
+      .filter(([, amount]) => amount > 0)
+      .map(([name, amount]) => ({ name, amount }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  };
 }
 
 export default function CoresPage() {
@@ -1060,10 +689,18 @@ export default function CoresPage() {
       10000
     );
 
+  const materialTotals = useMemo(
+    () => getCoreMaterialSummary(getMaterialTotals(selectedLevels, remainingMagmaCores)),
+    [selectedLevels, remainingMagmaCores]
+  );
+
   return (
     <main className="min-h-screen bg-[#151b24] px-4 py-8 text-white md:px-6 lg:px-8">
+
       <div className="mx-auto max-w-7xl">
+
         <div className="mb-8">
+
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8ea9d6]">
             Progression
           </p>
@@ -1078,29 +715,36 @@ export default function CoresPage() {
             upgrades across Moon,
             Mars and Sun.
           </p>
+
         </div>
 
         <MagmaSection
           open={
             openSections.magma
           }
+
           onToggle={() =>
             toggleSection(
               "magma"
             )
           }
+
           magmaStorage={
             magmaStorage
           }
+
           setMagmaStorage={
             setMagmaStorage
           }
+
           nextMagmaCosts={
             nextMagmaCosts
           }
+
           maxMagmaCosts={
             maxMagmaCosts
           }
+
           progress={
             magmaProgress
           }
@@ -1110,17 +754,21 @@ export default function CoresPage() {
           open={
             openSections.power
           }
+
           onToggle={() =>
             toggleSection(
               "power"
             )
           }
+
           core={
             grouped.power
           }
+
           selectedLevels={
             selectedLevels
           }
+
           setCoreLevel={
             setCoreLevel
           }
@@ -1129,20 +777,25 @@ export default function CoresPage() {
         <PlanetSection
           title="Moon"
           region="moon"
+
           open={
             openSections.moon
           }
+
           onToggle={() =>
             toggleSection(
               "moon"
             )
           }
+
           cores={
             grouped.moon
           }
+
           selectedLevels={
             selectedLevels
           }
+
           setCoreLevel={
             setCoreLevel
           }
@@ -1151,20 +804,25 @@ export default function CoresPage() {
         <PlanetSection
           title="Mars"
           region="mars"
+
           open={
             openSections.mars
           }
+
           onToggle={() =>
             toggleSection(
               "mars"
             )
           }
+
           cores={
             grouped.mars
           }
+
           selectedLevels={
             selectedLevels
           }
+
           setCoreLevel={
             setCoreLevel
           }
@@ -1173,25 +831,59 @@ export default function CoresPage() {
         <PlanetSection
           title="Sun"
           region="sun"
+
           open={
             openSections.sun
           }
+
           onToggle={() =>
             toggleSection(
               "sun"
             )
           }
+
           cores={
             grouped.sun
           }
+
           selectedLevels={
             selectedLevels
           }
+
           setCoreLevel={
             setCoreLevel
           }
         />
+
+        <SectionShell
+          badge="Materials"
+          title="Material Totals"
+
+          open={
+            openSections.totals
+          }
+
+          onToggle={() =>
+            toggleSection(
+              "totals"
+            )
+          }
+
+          theme={
+            getTotalsTheme()
+          }
+        >
+
+          <MaterialTotals
+            summary={materialTotals}
+            description="Cumulative requirements to max Magma Storage, Power Rank and all planetary upgrades."
+            emptyMessage="All upgrades are maxed."
+          />
+
+        </SectionShell>
+
       </div>
+
     </main>
   );
 }
@@ -1212,17 +904,23 @@ function SectionShell({
   children: ReactNode;
 }) {
   return (
+
     <section
       className={`mb-6 min-w-0 overflow-hidden rounded-2xl border ${theme.sectionBorder} ${theme.sectionBg} ${theme.sectionGlow}`}
     >
+
       <button
         type="button"
+
         onClick={
           onToggle
         }
+
         className="flex w-full min-w-0 items-center justify-between gap-4 px-6 py-5 text-left transition"
       >
+
         <div className="min-w-0">
+
           <span
             className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] ${theme.badgeText} ${theme.badgeBg}`}
           >
@@ -1234,6 +932,7 @@ function SectionShell({
           >
             {title}
           </h2>
+
         </div>
 
         <span
@@ -1243,16 +942,21 @@ function SectionShell({
             ? "−"
             : "+"}
         </span>
+
       </button>
 
       {open && (
+
         <div
           className={`min-w-0 border-t ${theme.divider} px-6 pb-6 pt-5`}
         >
           {children}
         </div>
+
       )}
+
     </section>
+
   );
 }
 
@@ -1268,9 +972,11 @@ function MagmaSection({
   open: boolean;
   onToggle: () => void;
   magmaStorage: number;
+
   setMagmaStorage: (
     value: number
   ) => void;
+
   nextMagmaCosts: CoreCost[];
   maxMagmaCosts: CoreCost[];
   progress: number;
@@ -1279,6 +985,7 @@ function MagmaSection({
     getMagmaTheme();
 
   return (
+
     <SectionShell
       badge="Global"
       title="Magma Storage"
@@ -1288,9 +995,13 @@ function MagmaSection({
       }
       theme={theme}
     >
+
       <div className="grid min-w-0 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+
         <div className="min-w-0">
+
           <label className="block min-w-0">
+
             <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
               Current Storage
             </span>
@@ -1299,6 +1010,7 @@ function MagmaSection({
               value={
                 magmaStorage
               }
+
               onChange={(e) =>
                 setMagmaStorage(
                   Number(
@@ -1307,14 +1019,20 @@ function MagmaSection({
                   )
                 )
               }
+
               className={`mt-2 w-full min-w-0 rounded-xl border px-4 py-2.5 text-sm font-semibold text-white outline-none transition ${theme.selectBg} ${theme.selectBorder} ${theme.selectFocus}`}
             >
+
               {magmaStages.map(
-                (stage) => (
+                (
+                  stage
+                ) => (
+
                   <option
                     key={
                       stage.storage
                     }
+
                     value={
                       stage.storage
                     }
@@ -1323,37 +1041,51 @@ function MagmaSection({
                       stage.storage
                     )}
                   </option>
+
                 )
               )}
+
             </select>
+
           </label>
 
           <div className="mt-5 min-w-0">
+
             <ProgressBar
               label="Progress"
+
               value={
                 progress
               }
+
               current={`${formatNumber(
                 magmaStorage
               )} / 10,000`}
+
               trackClass={
                 theme.progressTrack
               }
+
               fillClass={
                 theme.progressFill
               }
             />
+
           </div>
+
         </div>
 
         <div className="grid min-w-0 gap-4 md:grid-cols-2">
+
           <CostPanel
             title="Next Level"
+
             costs={
               nextMagmaCosts
             }
+
             empty="Max level"
+
             background={
               theme.panelBg
             }
@@ -1361,17 +1093,24 @@ function MagmaSection({
 
           <CostPanel
             title="To Max"
+
             costs={
               maxMagmaCosts
             }
+
             empty="Already maxed"
+
             background={
               theme.panelBg
             }
           />
+
         </div>
+
       </div>
+
     </SectionShell>
+
   );
 }
 
@@ -1385,10 +1124,12 @@ function PowerSection({
   open: boolean;
   onToggle: () => void;
   core?: ProgressionCore;
+
   selectedLevels: Record<
     string,
     number
   >;
+
   setCoreLevel: (
     coreId: string,
     level: number
@@ -1399,6 +1140,7 @@ function PowerSection({
 
   if (!core) {
     return (
+
       <SectionShell
         badge="Global"
         title="Power Cores/Rank"
@@ -1408,8 +1150,11 @@ function PowerSection({
         }
         theme={theme}
       >
+
         <EmptyState text="Power progression data hasn't been added yet." />
+
       </SectionShell>
+
     );
   }
 
@@ -1427,7 +1172,9 @@ function PowerSection({
 
   const currentLevel =
     levels.find(
-      (level) =>
+      (
+        level
+      ) =>
         level.level ===
         selectedLevel
     );
@@ -1436,7 +1183,9 @@ function PowerSection({
     levels.length > 0
       ? Math.max(
           ...levels.map(
-            (level) =>
+            (
+              level
+            ) =>
               level.level
           )
         )
@@ -1457,6 +1206,7 @@ function PowerSection({
       : [];
 
   return (
+
     <SectionShell
       badge="Global"
       title="Power Cores / Rank"
@@ -1466,9 +1216,13 @@ function PowerSection({
       }
       theme={theme}
     >
+
       <div className="grid min-w-0 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+
         <div className="min-w-0">
+
           <label className="block min-w-0">
+
             <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
               Current Rank
             </span>
@@ -1477,6 +1231,7 @@ function PowerSection({
               value={
                 selectedLevel
               }
+
               onChange={(e) =>
                 setCoreLevel(
                   core.id,
@@ -1486,14 +1241,20 @@ function PowerSection({
                   )
                 )
               }
+
               className={`mt-2 w-full min-w-0 rounded-xl border px-4 py-2.5 text-sm font-semibold text-white outline-none transition ${theme.selectBg} ${theme.selectBorder} ${theme.selectFocus}`}
             >
+
               {levels.map(
-                (level) => (
+                (
+                  level
+                ) => (
+
                   <option
                     key={
                       level.level
                     }
+
                     value={
                       level.level
                     }
@@ -1502,37 +1263,51 @@ function PowerSection({
                       level.label
                     }
                   </option>
+
                 )
               )}
+
             </select>
+
           </label>
 
           <div className="mt-5 min-w-0">
+
             <ProgressBar
               label="Progress"
+
               value={
                 progress
               }
+
               current={`${selectedLevel} / ${maxLevel}`}
+
               trackClass={
                 theme.progressTrack
               }
+
               fillClass={
                 theme.progressFill
               }
             />
+
           </div>
+
         </div>
 
         <div className="grid min-w-0 gap-4 md:grid-cols-2">
+
           <CostPanel
             title="Next Rank"
+
             costs={
               currentLevel
                 ?.nextCost ??
               []
             }
+
             empty="Max rank"
+
             background={
               theme.panelBg
             }
@@ -1540,17 +1315,24 @@ function PowerSection({
 
           <CostPanel
             title="To Max"
+
             costs={
               maxCosts
             }
+
             empty="Already maxed"
+
             background={
               theme.panelBg
             }
           />
+
         </div>
+
       </div>
+
     </SectionShell>
+
   );
 }
 
@@ -1568,10 +1350,12 @@ function PlanetSection({
   open: boolean;
   onToggle: () => void;
   cores: ProgressionCore[];
+
   selectedLevels: Record<
     string,
     number
   >;
+
   setCoreLevel: (
     coreId: string,
     level: number
@@ -1588,6 +1372,7 @@ function PlanetSection({
       : "grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3";
 
   return (
+
     <SectionShell
       badge="Planet"
       title={title}
@@ -1597,20 +1382,27 @@ function PlanetSection({
       }
       theme={theme}
     >
+
       <div
         className={
           gridClass
         }
       >
+
         {cores.map(
-          (core) => (
+          (
+            core
+          ) => (
+
             <CoreCard
               key={
                 core.id
               }
+
               core={
                 core
               }
+
               selectedLevel={
                 selectedLevels[
                   core.id
@@ -1619,6 +1411,7 @@ function PlanetSection({
                   ?.level ??
                 0
               }
+
               onLevelChange={(
                 level
               ) =>
@@ -1627,18 +1420,24 @@ function PlanetSection({
                   level
                 )
               }
+
               customTheme={
                 theme
               }
+
               compact={
                 region ===
                 "mars"
               }
             />
+
           )
         )}
+
       </div>
+
     </SectionShell>
+
   );
 }
 
@@ -1651,9 +1450,11 @@ function CoreCard({
 }: {
   core: ProgressionCore;
   selectedLevel: number;
+
   onLevelChange: (
     level: number
   ) => void;
+
   customTheme?: Theme;
   compact?: boolean;
 }) {
@@ -1670,14 +1471,18 @@ function CoreCard({
 
   const currentLevel =
     levels.find(
-      (level) =>
+      (
+        level
+      ) =>
         level.level ===
         selectedLevel
     );
 
   const nextLevel =
     levels.find(
-      (level) =>
+      (
+        level
+      ) =>
         level.level ===
         selectedLevel +
           1
@@ -1690,7 +1495,9 @@ function CoreCard({
     levels.length > 0
       ? Math.min(
           ...levels.map(
-            (level) =>
+            (
+              level
+            ) =>
               level.level
           )
         )
@@ -1700,7 +1507,9 @@ function CoreCard({
     levels.length > 0
       ? Math.max(
           ...levels.map(
-            (level) =>
+            (
+              level
+            ) =>
               level.level
           )
         )
@@ -1726,11 +1535,19 @@ function CoreCard({
       : [];
 
   return (
+
     <article
-      className={`min-w-0 overflow-hidden rounded-2xl border ${compact ? "p-3.5" : "p-4"} ${theme.cardBg} ${theme.cardBorder} ${theme.cardGlow}`}
+      className={`min-w-0 overflow-hidden rounded-2xl border ${
+        compact
+          ? "p-3.5"
+          : "p-4"
+      } ${theme.cardBg} ${theme.cardBorder} ${theme.cardGlow}`}
     >
+
       <div className="flex min-w-0 items-start justify-between gap-2">
+
         <div className="min-w-0">
+
           <h3 className="truncate text-lg font-bold">
             {core.name}
           </h3>
@@ -1738,19 +1555,26 @@ function CoreCard({
           <p className="mt-1 truncate text-xs capitalize text-white/45">
             {core.region} progression
           </p>
+
         </div>
 
         {hasData && (
+
           <div className="shrink-0 rounded-lg bg-black/15 px-2.5 py-1 text-xs font-semibold text-white/65">
             {selectedLevel}/
             {maxLevel}
           </div>
+
         )}
+
       </div>
 
       {hasData ? (
+
         <>
+
           <label className="mt-4 block min-w-0">
+
             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
               Current Level
             </span>
@@ -1759,6 +1583,7 @@ function CoreCard({
               value={
                 selectedLevel
               }
+
               onChange={(e) =>
                 onLevelChange(
                   Number(
@@ -1767,14 +1592,20 @@ function CoreCard({
                   )
                 )
               }
+
               className={`mt-2 w-full min-w-0 rounded-xl border px-3 py-2.5 text-sm text-white outline-none transition ${theme.selectBg} ${theme.selectBorder} ${theme.selectFocus}`}
             >
+
               {levels.map(
-                (level) => (
+                (
+                  level
+                ) => (
+
                   <option
                     key={
                       level.level
                     }
+
                     value={
                       level.level
                     }
@@ -1783,40 +1614,52 @@ function CoreCard({
                       level.label
                     }
                   </option>
+
                 )
               )}
+
             </select>
+
           </label>
 
           <div className="mt-4 min-w-0">
+
             <ProgressBar
               label="Progress"
+
               value={
                 progress
               }
+
               current={`${Math.round(
                 progress
               )}%`}
+
               trackClass={
                 theme.progressTrack
               }
+
               fillClass={
                 theme.progressFill
               }
             />
+
           </div>
 
           {currentLevel
             ?.sellPrice !==
             undefined && (
+
             <div
               className={`mt-4 min-w-0 rounded-xl px-4 py-3 ${theme.sellBg}`}
             >
+
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/50">
                 Sell Price
               </p>
 
               <div className="mt-1 flex min-w-0 items-center justify-between gap-2">
+
                 <span className="min-w-0 truncate text-lg font-bold">
                   {formatNumber(
                     currentLevel.sellPrice
@@ -1826,26 +1669,35 @@ function CoreCard({
                 {nextLevel
                   ?.sellPrice !==
                   undefined && (
+
                   <span className="shrink-0 text-xs font-semibold text-white/60 xl:text-sm">
                     →{" "}
                     {formatNumber(
                       nextLevel.sellPrice
                     )}
                   </span>
+
                 )}
+
               </div>
+
             </div>
+
           )}
 
           <div className="mt-4 grid min-w-0 gap-3">
+
             <CostCard
               title="Next Level"
+
               costs={
                 currentLevel
                   ?.nextCost ??
                 []
               }
+
               empty="Max level"
+
               background={
                 theme.panelBg
               }
@@ -1853,24 +1705,34 @@ function CoreCard({
 
             <CostCard
               title="To Max"
+
               costs={
                 maxCosts
               }
+
               empty="Already maxed"
+
               background={
                 theme.panelBg
               }
             />
+
           </div>
+
         </>
+
       ) : (
+
         <div className="mt-4 min-w-0 rounded-xl bg-black/15 p-4 text-sm text-white/55">
           Progression data
           still needs to be
           added.
         </div>
+
       )}
+
     </article>
+
   );
 }
 
@@ -1888,8 +1750,11 @@ function ProgressBar({
   fillClass: string;
 }) {
   return (
+
     <div className="min-w-0">
+
       <div className="mb-2 flex min-w-0 items-center justify-between gap-3">
+
         <p className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
           {label}
         </p>
@@ -1897,19 +1762,26 @@ function ProgressBar({
         <p className="shrink-0 text-xs font-semibold text-white/70">
           {current}
         </p>
+
       </div>
 
       <div
         className={`h-2 min-w-0 overflow-hidden rounded-full ${trackClass}`}
       >
+
         <div
           className={`h-full rounded-full transition-all duration-300 ${fillClass}`}
+
           style={{
-            width: `${value}%`,
+            width:
+              `${value}%`,
           }}
         />
+
       </div>
+
     </div>
+
   );
 }
 
@@ -1930,26 +1802,34 @@ function CostPanel({
     );
 
   return (
+
     <div
       className={`min-w-0 overflow-hidden rounded-2xl border border-white/10 p-4 ${background}`}
     >
+
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9aa4af]">
         {title}
       </p>
 
       {displayCosts.length >
       0 ? (
+
         <CostList
           costs={
             displayCosts
           }
         />
+
       ) : (
+
         <p className="mt-3 text-sm text-[#87919c]">
           {empty}
         </p>
+
       )}
+
     </div>
+
   );
 }
 
@@ -1970,42 +1850,58 @@ function CostCard({
     );
 
   return (
+
     <div
       className={`min-w-0 overflow-hidden rounded-xl border border-white/10 p-3.5 ${background}`}
     >
+
       <div className="mb-3 flex min-w-0 items-center justify-between gap-2">
+
         <p className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
           {title}
         </p>
 
         {displayCosts.length >
           0 && (
+
           <span className="shrink-0 text-[9px] font-medium text-white/35">
+
             {
               displayCosts.length
             }{" "}
+
             {displayCosts.length ===
             1
               ? "item"
               : "items"}
+
           </span>
+
         )}
+
       </div>
 
       {displayCosts.length >
       0 ? (
+
         <CostList
           costs={
             displayCosts
           }
+
           compact
         />
+
       ) : (
+
         <p className="text-sm text-white/45">
           {empty}
         </p>
+
       )}
+
     </div>
+
   );
 }
 
@@ -2017,6 +1913,7 @@ function CostList({
   compact?: boolean;
 }) {
   return (
+
     <div
       className={`min-w-0 ${
         compact
@@ -2024,20 +1921,26 @@ function CostList({
           : "mt-3 space-y-2"
       }`}
     >
+
       {costs.map(
         (
           cost,
           index
         ) => (
+
           <ExpandableCostRow
             key={`${cost.name}-${index}`}
+
             cost={
               cost
             }
           />
+
         )
       )}
+
     </div>
+
   );
 }
 
@@ -2059,7 +1962,9 @@ function ExpandableCostRow({
 
   if (!recipe) {
     return (
+
       <div className="flex min-w-0 items-center justify-between gap-3">
+
         <span className="min-w-0 break-words text-sm text-white/75">
           {getDisplayCostName(
             cost
@@ -2071,7 +1976,9 @@ function ExpandableCostRow({
             cost
           )}
         </span>
+
       </div>
+
     );
   }
 
@@ -2082,18 +1989,26 @@ function ExpandableCostRow({
     );
 
   return (
+
     <div className="min-w-0">
+
       <button
         type="button"
+
         onClick={() =>
           setOpen(
-            (current) =>
+            (
+              current
+            ) =>
               !current
           )
         }
+
         className="flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-1.5 py-1.5 text-left transition hover:bg-white/5"
       >
+
         <div className="flex min-w-0 items-center gap-1.5">
+
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-black/20 text-xs font-bold text-white/60">
             {open
               ? "−"
@@ -2109,6 +2024,7 @@ function ExpandableCostRow({
           <span className="hidden shrink-0 rounded-md bg-white/5 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-white/40 min-[1450px]:inline">
             Recipe
           </span>
+
         </div>
 
         <span className="shrink-0 text-sm font-bold text-white">
@@ -2116,16 +2032,21 @@ function ExpandableCostRow({
             cost
           )}
         </span>
+
       </button>
 
       {open && (
+
         <RecipeBox
           costs={
             recipeCosts
           }
         />
+
       )}
+
     </div>
+
   );
 }
 
@@ -2135,27 +2056,36 @@ function RecipeBox({
   costs: CoreCost[];
 }) {
   return (
+
     <div className="mt-1.5 min-w-0 overflow-hidden rounded-lg border border-white/10 bg-black/10 px-2.5 py-2.5">
+
       <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/35">
         Crafting ingredients
       </p>
 
       <div className="min-w-0 space-y-2">
+
         {costs.map(
           (
             cost,
             index
           ) => (
+
             <RecipeRow
               key={`${cost.name}-${index}`}
+
               cost={
                 cost
               }
             />
+
           )
         )}
+
       </div>
+
     </div>
+
   );
 }
 
@@ -2177,7 +2107,9 @@ function RecipeRow({
 
   if (!recipe) {
     return (
+
       <div className="flex min-w-0 items-center justify-between gap-2">
+
         <span className="min-w-0 break-words text-xs text-white/65">
           {getDisplayCostName(
             cost
@@ -2189,7 +2121,9 @@ function RecipeRow({
             cost
           )}
         </span>
+
       </div>
+
     );
   }
 
@@ -2200,18 +2134,26 @@ function RecipeRow({
     );
 
   return (
+
     <div className="min-w-0">
+
       <button
         type="button"
+
         onClick={() =>
           setOpen(
-            (current) =>
+            (
+              current
+            ) =>
               !current
           )
         }
+
         className="flex w-full min-w-0 items-center justify-between gap-2 rounded-md py-1 text-left"
       >
+
         <div className="flex min-w-0 items-center gap-1.5">
+
           <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-white/5 text-[10px] text-white/50">
             {open
               ? "−"
@@ -2223,6 +2165,7 @@ function RecipeRow({
               cost
             )}
           </span>
+
         </div>
 
         <span className="shrink-0 text-xs font-semibold text-white/85">
@@ -2230,18 +2173,25 @@ function RecipeRow({
             cost
           )}
         </span>
+
       </button>
 
       {open && (
+
         <div className="mt-1 min-w-0 pl-2">
+
           <RecipeBox
             costs={
               nestedCosts
             }
           />
+
         </div>
+
       )}
+
     </div>
+
   );
 }
 
@@ -2251,8 +2201,10 @@ function EmptyState({
   text: string;
 }) {
   return (
+
     <div className="min-w-0 rounded-2xl border border-white/10 bg-[#1f252c] p-4 text-sm text-[#9aa4af]">
       {text}
     </div>
+
   );
 }

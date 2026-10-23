@@ -17,6 +17,9 @@ import {
   pickaxes,
   type WeaponType,
 } from "../../data/weapons";
+import { CollapsibleSection } from "../../components/ui/CollapsibleSection";
+import { NumberInput, SelectInput, ToggleCard } from "../../components/ui/CalculatorInputs";
+import { StatBox, MiniStat, RecommendationStat } from "../../components/ui/StatCards";
 
 /* =========================================================
    TYPES
@@ -1439,7 +1442,7 @@ export default function PvEPage() {
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 
-            <SelectInput
+            <SelectInput theme="combat"
               label="Current Tier"
 
               value={`Tier ${settings.currentTier}`}
@@ -1466,7 +1469,7 @@ export default function PvEPage() {
               }
             />
 
-            <SelectInput
+            <SelectInput theme="combat"
               label="Weapon Type"
 
               value={
@@ -1493,7 +1496,7 @@ export default function PvEPage() {
               }
             />
 
-            <SelectInput
+            <SelectInput theme="combat"
               label={
                 settings.weaponType ===
                 "pickaxe"
@@ -1531,7 +1534,7 @@ export default function PvEPage() {
               }
             />
 
-            <NumberInput
+            <NumberInput theme="combat"
               label="Attack Speed"
 
               suffix="Hits/s"
@@ -1558,7 +1561,7 @@ export default function PvEPage() {
               }
             />
 
-            <SelectInput
+            <SelectInput theme="combat"
               label="Bedrock Talisman"
 
               value={
@@ -1580,7 +1583,7 @@ export default function PvEPage() {
               }
             />
 
-            <SelectInput
+            <SelectInput theme="combat"
               label="T3 Damage Upgrader"
 
               value={String(
@@ -1616,7 +1619,7 @@ export default function PvEPage() {
               }
             />
 
-            <SelectInput
+            <SelectInput theme="combat"
               label="T5 Damage Upgrade"
 
               value={String(
@@ -1652,7 +1655,7 @@ export default function PvEPage() {
               }
             />
 
-            <ToggleCard
+            <ToggleCard theme="combat"
               label="Autumn Event"
 
               description="×1.5 damage"
@@ -1802,7 +1805,7 @@ export default function PvEPage() {
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 
-            <StatBox
+            <StatBox wrapValue
               label="Weapon Damage"
 
               value={formatNumber(
@@ -1812,7 +1815,7 @@ export default function PvEPage() {
               )}
             />
 
-            <StatBox
+            <StatBox wrapValue
               label="T3 / T4 Damage"
 
               value={formatNumber(
@@ -1828,7 +1831,7 @@ export default function PvEPage() {
               )}
             />
 
-            <StatBox
+            <StatBox wrapValue
               label="T5 Damage"
 
               value={formatNumber(
@@ -1844,7 +1847,7 @@ export default function PvEPage() {
               )}
             />
 
-            <StatBox
+            <StatBox wrapValue
               label="Attack Speed"
 
               value={`${formatNumber(
@@ -1889,7 +1892,7 @@ export default function PvEPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
 
-            <SelectInput
+            <SelectInput theme="combat"
               label="Drop"
 
               value={
@@ -1910,7 +1913,7 @@ export default function PvEPage() {
               }
             />
 
-            <NumberInput
+            <NumberInput theme="combat"
               label="Farming Time"
 
               suffix="Hr"
@@ -2360,93 +2363,7 @@ export default function PvEPage() {
   );
 }
 
-/* =========================================================
-   COLLAPSIBLE MAIN SECTION
-   ========================================================= */
 
-function CollapsibleSection({
-  eyebrow,
-  title,
-  open,
-  onToggle,
-  borderClass,
-  backgroundClass,
-  accentClass,
-  buttonClass,
-  children,
-}: {
-  eyebrow: string;
-
-  title: string;
-
-  open: boolean;
-
-  onToggle:
-    () => void;
-
-  borderClass: string;
-
-  backgroundClass: string;
-
-  accentClass: string;
-
-  buttonClass: string;
-
-  children:
-    ReactNode;
-}) {
-  return (
-
-    <section
-      className={`mb-6 overflow-hidden rounded-2xl border ${borderClass} ${backgroundClass}`}
-    >
-
-      <button
-        type="button"
-
-        onClick={
-          onToggle
-        }
-
-        className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left md:px-6"
-      >
-
-        <div>
-
-          <p
-            className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${accentClass}`}
-          >
-            {eyebrow}
-          </p>
-
-          <h2 className="mt-2 text-2xl font-bold">
-            {title}
-          </h2>
-
-        </div>
-
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl font-bold ${buttonClass}`}
-        >
-          {open
-            ? "−"
-            : "+"}
-        </span>
-
-      </button>
-
-      {open && (
-
-        <div className="border-t border-white/10 p-5 md:p-6">
-          {children}
-        </div>
-
-      )}
-
-    </section>
-
-  );
-}
 
 /* =========================================================
    TIER SECTION
@@ -2674,7 +2591,7 @@ function MobCard({
 
             <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
 
-              <MiniStat
+              <MiniStat wrapValue
                 label="HP"
 
                 value={formatNumber(
@@ -2682,7 +2599,7 @@ function MobCard({
                 )}
               />
 
-              <MiniStat
+              <MiniStat wrapValue
                 label="Damage / Hit"
 
                 value={formatNumber(
@@ -2690,7 +2607,7 @@ function MobCard({
                 )}
               />
 
-              <MiniStat
+              <MiniStat wrapValue
                 label="Hits to Kill"
 
                 value={formatNumber(
@@ -2698,7 +2615,7 @@ function MobCard({
                 )}
               />
 
-              <MiniStat
+              <MiniStat wrapValue
                 label="Time to Kill"
 
                 value={`${formatNumber(
@@ -2707,7 +2624,7 @@ function MobCard({
                 )}s`}
               />
 
-              <MiniStat
+              <MiniStat wrapValue
                 label="Kills / Hour"
 
                 value={formatNumber(
@@ -2720,7 +2637,7 @@ function MobCard({
 
             <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
 
-              <MiniStat
+              <MiniStat wrapValue
                 label="Ash / Hour"
 
                 value={formatCompact(
@@ -2730,7 +2647,7 @@ function MobCard({
 
               {boneDragonOwned && (
 
-                <MiniStat
+                <MiniStat wrapValue
                   label="Star-Shards / Hour"
 
                   value={formatNumber(
@@ -2743,7 +2660,7 @@ function MobCard({
 
               {silverSerpentOwned && (
 
-                <MiniStat
+                <MiniStat wrapValue
                   label="Silver Serpent HP Reduction"
 
                   value={`${formatNumber(
@@ -2970,7 +2887,7 @@ function ScenarioCard({
 
       <div className="mt-4 grid grid-cols-2 gap-2">
 
-        <MiniStat
+        <MiniStat wrapValue
           label="Hits to Kill"
 
           value={formatNumber(
@@ -2978,7 +2895,7 @@ function ScenarioCard({
           )}
         />
 
-        <MiniStat
+        <MiniStat wrapValue
           label="Time to Kill"
 
           value={`${formatNumber(
@@ -2987,7 +2904,7 @@ function ScenarioCard({
           )}s`}
         />
 
-        <MiniStat
+        <MiniStat wrapValue
           label="Kills / Hour"
 
           value={formatNumber(
@@ -2996,7 +2913,7 @@ function ScenarioCard({
           )}
         />
 
-        <MiniStat
+        <MiniStat wrapValue
           label="Ash / Hour"
 
           value={formatCompact(
@@ -3147,356 +3064,6 @@ function PetCard({
   );
 }
 
-/* =========================================================
-   SELECT INPUT
-   ========================================================= */
-
-type SelectOption =
-  | string
-  | {
-      value: string;
-      label: string;
-    };
-
-function SelectInput({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-
-  value: string;
-
-  options:
-    SelectOption[];
-
-  onChange:
-    (
-      value: string
-    ) => void;
-}) {
-  return (
-
-    <label className="block min-w-0">
-
-      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/55">
-        {label}
-      </span>
-
-      <select
-        value={
-          value
-        }
-
-        onChange={(
-          event
-        ) =>
-          onChange(
-            event.target.value
-          )
-        }
-
-        className="mt-2 w-full rounded-xl border border-[#505b67] bg-[#171d25] px-3 py-3 text-sm font-semibold text-white outline-none transition focus:border-[#d69868]"
-      >
-
-        {options.map(
-          (
-            option
-          ) => {
-
-            const optionValue =
-              typeof option ===
-              "string"
-                ? option
-                : option.value;
-
-            const optionLabel =
-              typeof option ===
-              "string"
-                ? option
-                : option.label;
-
-            return (
-
-              <option
-                key={
-                  optionValue
-                }
-
-                value={
-                  optionValue
-                }
-              >
-                {optionLabel}
-              </option>
-
-            );
-          }
-        )}
-
-      </select>
-
-    </label>
-
-  );
-}
-
-/* =========================================================
-   NUMBER INPUT
-   ========================================================= */
-
-function NumberInput({
-  label,
-  suffix,
-  value,
-  min,
-  max,
-  step,
-  onChange,
-}: {
-  label: string;
-
-  suffix?: string;
-
-  value: number;
-
-  min?: number;
-
-  max?: number;
-
-  step?: number;
-
-  onChange:
-    (
-      value: number
-    ) => void;
-}) {
-  return (
-
-    <label className="block min-w-0">
-
-      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/55">
-        {label}
-      </span>
-
-      <div className="relative mt-2">
-
-        <input
-          type="number"
-
-          value={
-            Number.isFinite(
-              value
-            )
-              ? value
-              : 0
-          }
-
-          min={
-            min
-          }
-
-          max={
-            max
-          }
-
-          step={
-            step
-          }
-
-          onChange={(
-            event
-          ) => {
-
-            const parsed =
-              Number(
-                event.target.value
-              );
-
-            onChange(
-              Number.isFinite(
-                parsed
-              )
-                ? parsed
-                : 0
-            );
-          }}
-
-          className="w-full rounded-xl border border-[#505b67] bg-[#171d25] px-3 py-3 pr-16 text-sm font-semibold text-white outline-none transition focus:border-[#d69868]"
-        />
-
-        {suffix && (
-
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-white/40">
-            {suffix}
-          </span>
-
-        )}
-
-      </div>
-
-    </label>
-
-  );
-}
-
-/* =========================================================
-   TOGGLE CARD
-   ========================================================= */
-
-function ToggleCard({
-  label,
-  description,
-  enabled,
-  onToggle,
-}: {
-  label: string;
-
-  description: string;
-
-  enabled: boolean;
-
-  onToggle:
-    () => void;
-}) {
-  return (
-
-    <button
-      type="button"
-
-      onClick={
-        onToggle
-      }
-
-      className={`flex min-h-[74px] items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left transition ${
-        enabled
-          ? "border-[#d69868] bg-[#34251f]"
-          : "border-[#505b67] bg-[#171d25]"
-      }`}
-    >
-
-      <div>
-
-        <p className="text-sm font-bold">
-          {label}
-        </p>
-
-        <p className="mt-1 text-xs text-white/45">
-          {description}
-        </p>
-
-      </div>
-
-      <div
-        className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-          enabled
-            ? "bg-[#d69868]"
-            : "bg-[#3b444e]"
-        }`}
-      >
-
-        <div
-          className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${
-            enabled
-              ? "left-6"
-              : "left-1"
-          }`}
-        />
-
-      </div>
-
-    </button>
-
-  );
-}
-
-/* =========================================================
-   STAT BOX
-   ========================================================= */
-
-function StatBox({
-  label,
-  value,
-}: {
-  label: string;
-
-  value: string;
-}) {
-  return (
-
-    <div className="rounded-xl border border-white/10 bg-[#171d25] p-4">
-
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
-        {label}
-      </p>
-
-      <p className="mt-2 break-words text-xl font-bold">
-        {value}
-      </p>
-
-    </div>
-
-  );
-}
-
-/* =========================================================
-   MINI STAT
-   ========================================================= */
-
-function MiniStat({
-  label,
-  value,
-}: {
-  label: string;
-
-  value: string;
-}) {
-  return (
-
-    <div className="min-w-0 rounded-lg bg-black/10 p-3">
-
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
-        {label}
-      </p>
-
-      <p className="mt-1 break-words text-sm font-bold">
-        {value}
-      </p>
-
-    </div>
-
-  );
-}
-
-/* =========================================================
-   RECOMMENDATION STAT
-   ========================================================= */
-
-function RecommendationStat({
-  label,
-  value,
-}: {
-  label: string;
-
-  value: string;
-}) {
-  return (
-
-    <div className="min-w-0 rounded-xl border border-white/10 bg-black/10 p-4">
-
-      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">
-        {label}
-      </p>
-
-      <p className="mt-2 break-words text-lg font-bold">
-        {value}
-      </p>
-
-    </div>
-
-  );
-}
 
 /* =========================================================
    TIER THEMES

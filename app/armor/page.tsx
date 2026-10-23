@@ -15,10 +15,14 @@ import {
 } from "../../data/armor";
 
 import {
-  compactedItems,
-  getUnderlyingCompactedItem,
-  type CompactedItem,
-} from "../../data/compactedItems";
+  getExpandedRequirement,
+  getMaterialLabel,
+} from "../../lib/materials";
+import { formatHours, formatMaterialValue, formatNumber } from "../../lib/format";
+import { CollapsibleSection as MainSection } from "../../components/ui/CollapsibleSection";
+import { OverviewStat } from "../../components/ui/StatCards";
+import { MaterialTotals } from "../../components/ui/MaterialTotals";
+import { getMaterialSummary } from "../../lib/materialTotals";
 
 /* =========================================================
    TYPES
@@ -38,19 +42,6 @@ type OpenSections = {
 type SavedState = {
   completedPieces: string[];
   openSections: OpenSections;
-};
-
-type MaterialTotal = {
-  material: string;
-  amount: number;
-};
-
-type ExpandedRequirement = {
-  compactedItem: CompactedItem;
-  isPlasma: boolean;
-  amount: number;
-  ingredients: MaterialTotal[];
-  timeHours: number;
 };
 
 /* =========================================================
@@ -78,60 +69,6 @@ const DEFAULT_STATE: SavedState = {
 };
 
 /* =========================================================
-   MATERIAL LABELS
-   ========================================================= */
-
-const MATERIAL_LABELS: Record<
-  string,
-  string
-> = {
-  coinsQd:
-    "Coins",
-
-  starShards:
-    "Star-Shards",
-
-  compactedCoins:
-    "Compacted Coins",
-
-  plasmaCompactedCoins:
-    "Plasma Compacted Coins",
-
-  lunarFragment:
-    "Lunar Fragment",
-
-  chisiliteShard:
-    "Chisilite Shard",
-
-  basaltShard:
-    "Basalt Shard",
-
-  breccaPowder:
-    "Brecca Powder",
-
-  martianDust:
-    "Martian Dust",
-
-  amberFragment:
-    "Amber Fragment",
-
-  ametrine:
-    "Ametrine",
-
-  rhodnite:
-    "Rhodnite",
-
-  sunFragment:
-    "Sun Fragment",
-
-  plasmaShard:
-    "Plasma Shard",
-
-  fiber:
-    "Fiber",
-};
-
-/* =========================================================
    PIECE LABELS
    ========================================================= */
 
@@ -153,78 +90,6 @@ const PIECE_LABELS: Record<
    HELPERS
    ========================================================= */
 
-function formatNumber(
-  value: number
-) {
-  return value.toLocaleString(
-    undefined,
-    {
-      maximumFractionDigits: 2,
-    }
-  );
-}
-
-function formatMaterialValue(
-  material: string,
-  amount: number
-) {
-  if (
-    material ===
-    "coinsQd"
-  ) {
-    return `${formatNumber(
-      amount
-    )}Qd`;
-  }
-
-  return formatNumber(
-    amount
-  );
-}
-
-function formatHours(
-  value: number
-) {
-  if (
-    Number.isInteger(
-      value
-    )
-  ) {
-    return `${value}h`;
-  }
-
-  return `${formatNumber(
-    value
-  )}h`;
-}
-
-function getMaterialLabel(
-  material: string
-) {
-  if (
-    MATERIAL_LABELS[
-      material
-    ]
-  ) {
-    return MATERIAL_LABELS[
-      material
-    ];
-  }
-
-  return material
-    .replace(
-      /([A-Z])/g,
-      " $1"
-    )
-    .replace(
-      /^./,
-      (
-        character
-      ) =>
-        character.toUpperCase()
-    );
-}
-
 function getPieceKey(
   tierId: string,
   pieceType: ArmorPieceType
@@ -242,104 +107,6 @@ function getTierIndex(
       tier.id ===
       tierId
   );
-}
-
-/* =========================================================
-   COMPACTED ITEM HELPERS
-   ========================================================= */
-
-function getDirectCompactedItem(
-  material: string
-) {
-  return compactedItems.find(
-    (
-      item
-    ) =>
-      item.id ===
-      material
-  );
-}
-
-function getExpandedRequirement(
-  requirement: ArmorRequirement
-): ExpandedRequirement | null {
-  const direct =
-    getDirectCompactedItem(
-      requirement.material
-    );
-
-  if (
-    direct
-  ) {
-    return {
-      compactedItem:
-        direct,
-
-      isPlasma:
-        false,
-
-      amount:
-        requirement.amount,
-
-      ingredients:
-        direct.requirements.map(
-          (
-            ingredient
-          ) => ({
-            material:
-              ingredient.material,
-
-            amount:
-              ingredient.amount *
-              requirement.amount,
-          })
-        ),
-
-      timeHours:
-        direct.timeHours *
-        requirement.amount,
-    };
-  }
-
-  const underlying =
-    getUnderlyingCompactedItem(
-      requirement.material
-    );
-
-  if (
-    underlying
-  ) {
-    return {
-      compactedItem:
-        underlying,
-
-      isPlasma:
-        true,
-
-      amount:
-        requirement.amount,
-
-      ingredients:
-        underlying.requirements.map(
-          (
-            ingredient
-          ) => ({
-            material:
-              ingredient.material,
-
-            amount:
-              ingredient.amount *
-              requirement.amount,
-          })
-        ),
-
-      timeHours:
-        underlying.timeHours *
-        requirement.amount,
-    };
-  }
-
-  return null;
 }
 
 /* =========================================================
@@ -570,74 +337,12 @@ export default function ArmorPage() {
      Only counts armor pieces that are not completed.
      ======================================================= */
 
-  const remainingMaterialTotals =
-    useMemo(() => {
-      const totals =
-        new Map<
-          string,
-          number
-        >();
-
-      armor.forEach(
-        (
-          tier
-        ) => {
-          tier.pieces.forEach(
-            (
-              piece
-            ) => {
-              const pieceKey =
-                getPieceKey(
-                  tier.id,
-                  piece.type
-                );
-
-              if (
-                completedSet.has(
-                  pieceKey
-                )
-              ) {
-                return;
-              }
-
-              piece.requirements.forEach(
-                (
-                  requirement
-                ) => {
-                  totals.set(
-                    requirement.material,
-
-                    (
-                      totals.get(
-                        requirement.material
-                      ) ??
-                      0
-                    ) +
-                      requirement.amount
-                  );
-                }
-              );
-            }
-          );
-        }
-      );
-
-      return Array.from(
-        totals.entries()
-      ).map(
-        (
-          [
-            material,
-            amount,
-          ]
-        ): MaterialTotal => ({
-          material,
-          amount,
-        })
-      );
-    }, [
-      completedSet,
-    ]);
+  const remainingMaterialTotals = useMemo(
+    () => getMaterialSummary(armor.flatMap(tier => tier.pieces
+      .filter(piece => !completedSet.has(getPieceKey(tier.id, piece.type)))
+      .flatMap(piece => piece.requirements))),
+    [completedSet]
+  );
 
   /* =======================================================
      TOGGLE PIECE
@@ -1370,66 +1075,11 @@ export default function ArmorPage() {
           buttonClass="bg-[#30432d] text-[#b9dfaf]"
         >
 
-          <div className="rounded-2xl border border-white/10 bg-black/10 p-4 md:p-5">
-
-            <div>
-
-              <h3 className="text-lg font-bold">
-                Remaining Materials
-              </h3>
-
-              <p className="mt-1 text-xs text-white/35">
-                Everything still required for armor pieces you have not completed.
-              </p>
-
-            </div>
-
-            {remainingMaterialTotals.length >
-            0 ? (
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
-                {remainingMaterialTotals.map(
-                  (
-                    total
-                  ) => (
-
-                    <MaterialBox
-                      key={
-                        total.material
-                      }
-
-                      material={
-                        total.material
-                      }
-
-                      amount={
-                        total.amount
-                      }
-                    />
-
-                  )
-                )}
-
-              </div>
-
-            ) : (
-
-              <div className="mt-4 rounded-xl border border-white/10 bg-black/10 p-5 text-center">
-
-                <p className="font-semibold text-[#b9dfaf]">
-                  All armor completed
-                </p>
-
-                <p className="mt-1 text-sm text-white/35">
-                  You have no remaining armor materials.
-                </p>
-
-              </div>
-
-            )}
-
-          </div>
+          <MaterialTotals
+            summary={remainingMaterialTotals}
+            description="Cumulative requirements for every armor piece you have not completed."
+            emptyMessage="All armor completed. You have no remaining armor materials."
+          />
 
         </MainSection>
 
@@ -1945,40 +1595,7 @@ function RequirementDisplay({
   );
 }
 
-/* =========================================================
-   MATERIAL BOX
 
-   Same visual style as Drills Material Totals.
-   ========================================================= */
-
-function MaterialBox({
-  material,
-  amount,
-}: {
-  material: string;
-  amount: number;
-}) {
-  return (
-
-    <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
-        {getMaterialLabel(
-          material
-        )}
-      </p>
-
-      <p className="mt-1 text-lg font-bold">
-        {formatMaterialValue(
-          material,
-          amount
-        )}
-      </p>
-
-    </div>
-
-  );
-}
 
 /* =========================================================
    ARMOR SECTION
@@ -1999,175 +1616,25 @@ function ArmorSection({
   onToggle: () => void;
   children: ReactNode;
 }) {
-  const theme =
-    getArmorTheme(
-      region
-    );
+  const theme = getArmorTheme(region);
 
   return (
-
-    <section
-      className={`mb-6 overflow-hidden rounded-2xl border ${theme.border} ${theme.background}`}
+    <MainSection
+      eyebrow={eyebrow}
+      title={title}
+      open={open}
+      onToggle={onToggle}
+      borderClass={theme.border}
+      backgroundClass={theme.background}
+      accentClass={theme.accent}
+      buttonClass={theme.button}
+      contentClassName="border-t border-white/10 p-4 md:p-5"
     >
-
-      <button
-        type="button"
-
-        onClick={
-          onToggle
-        }
-
-        className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left md:px-6"
-      >
-
-        <div>
-
-          <p
-            className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${theme.accent}`}
-          >
-            {eyebrow}
-          </p>
-
-          <h2 className="mt-2 text-2xl font-bold">
-            {title}
-          </h2>
-
-        </div>
-
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl font-bold ${theme.button}`}
-        >
-          {open
-            ? "−"
-            : "+"}
-        </span>
-
-      </button>
-
-      {open && (
-
-        <div className="border-t border-white/10 p-4 md:p-5">
-          {children}
-        </div>
-
-      )}
-
-    </section>
-
+      {children}
+    </MainSection>
   );
 }
 
-/* =========================================================
-   MAIN SECTION
-   ========================================================= */
-
-function MainSection({
-  eyebrow,
-  title,
-  open,
-  onToggle,
-  borderClass,
-  backgroundClass,
-  accentClass,
-  buttonClass,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  borderClass: string;
-  backgroundClass: string;
-  accentClass: string;
-  buttonClass: string;
-  children: ReactNode;
-}) {
-  return (
-
-    <section
-      className={`mb-6 overflow-hidden rounded-2xl border ${borderClass} ${backgroundClass}`}
-    >
-
-      <button
-        type="button"
-
-        onClick={
-          onToggle
-        }
-
-        className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left md:px-6"
-      >
-
-        <div>
-
-          <p
-            className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${accentClass}`}
-          >
-            {eyebrow}
-          </p>
-
-          <h2 className="mt-2 text-2xl font-bold">
-            {title}
-          </h2>
-
-        </div>
-
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl font-bold ${buttonClass}`}
-        >
-          {open
-            ? "−"
-            : "+"}
-        </span>
-
-      </button>
-
-      {open && (
-
-        <div className="border-t border-white/10 p-5 md:p-6">
-          {children}
-        </div>
-
-      )}
-
-    </section>
-
-  );
-}
-
-/* =========================================================
-   OVERVIEW STAT
-   ========================================================= */
-
-function OverviewStat({
-  label,
-  value,
-  description,
-}: {
-  label: string;
-  value: string;
-  description: string;
-}) {
-  return (
-
-    <div className="rounded-xl border border-white/10 bg-black/10 p-4">
-
-      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">
-        {label}
-      </p>
-
-      <p className="mt-2 break-words text-xl font-bold">
-        {value}
-      </p>
-
-      <p className="mt-1 text-xs text-white/30">
-        {description}
-      </p>
-
-    </div>
-
-  );
-}
 
 /* =========================================================
    REGION BADGE

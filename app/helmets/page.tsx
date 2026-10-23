@@ -10,10 +10,14 @@ import {
 import { helmets } from "../../data/helmets";
 
 import {
-  compactedItems,
-  getUnderlyingCompactedItem,
-  type CompactedItem,
-} from "../../data/compactedItems";
+  getExpandedRequirement,
+  getMaterialLabel,
+} from "../../lib/materials";
+import { formatHours, formatMaterialValue, formatNumber } from "../../lib/format";
+import { CollapsibleSection as MainSection } from "../../components/ui/CollapsibleSection";
+import { OverviewStat } from "../../components/ui/StatCards";
+import { MaterialTotals } from "../../components/ui/MaterialTotals";
+import { getMaterialSummary } from "../../lib/materialTotals";
 
 /* =========================================================
    TYPES
@@ -49,19 +53,6 @@ type SavedState = {
   openSections: OpenSections;
 };
 
-type MaterialTotal = {
-  material: string;
-  amount: number;
-};
-
-type ExpandedRequirement = {
-  compactedItem: CompactedItem;
-  isPlasma: boolean;
-  amount: number;
-  ingredients: Requirement[];
-  timeHours: number;
-};
-
 /* =========================================================
    DATA
    ========================================================= */
@@ -94,170 +85,8 @@ const DEFAULT_STATE: SavedState = {
 };
 
 /* =========================================================
-   MATERIAL LABELS
-   ========================================================= */
-
-const MATERIAL_LABELS: Record<
-  string,
-  string
-> = {
-  coinsQd:
-    "Coins",
-
-  starShards:
-    "Star-Shards",
-
-  lunarFragment:
-    "Lunar Fragment",
-
-  chisiliteShard:
-    "Chisilite Shard",
-
-  basaltShard:
-    "Basalt Shard",
-
-  breccaPowder:
-    "Brecca Powder",
-
-  regolithSoil:
-    "Regolith Soil",
-
-  sunflowerSeedGrown:
-    "Sunflower Seed (Grown)",
-
-  souls:
-    "Souls",
-
-  mythicMysticSword:
-    "Mythic (Mystic) Sword",
-
-  amberFragment:
-    "Amber Fragment",
-
-  ametrine:
-    "Ametrine",
-
-  mythicPants:
-    "Mythic Pants",
-
-  rhodnite:
-    "Rhodnite",
-
-  plasmaShard:
-    "Plasma Shard",
-
-  fiber:
-    "Fiber",
-
-  sunFragment:
-    "Sun Fragment",
-
-  compactedCoins:
-    "Compacted Coins",
-
-  plasmaCompactedCoins:
-    "Plasma Compacted Coins",
-
-  compactedLunarAlloy:
-    "Compacted Lunar Alloy",
-
-  compactedMartianAlloy:
-    "Compacted Martian Alloy",
-
-  compactedSolarAlloy:
-    "Compacted Solar Alloy",
-
-  compactedStarShards:
-    "Compacted Star Shards",
-
-  plasmaCompactedStarShards:
-    "Plasma Compacted Star Shards",
-
-  plasmaCompactedLunarAlloy:
-    "Plasma Compacted Lunar Alloy",
-
-  plasmaCompactedMartianAlloy:
-    "Plasma Compacted Martian Alloy",
-
-  plasmaCompactedSolarAlloy:
-    "Plasma Compacted Solar Alloy",
-};
-
-/* =========================================================
    HELPERS
    ========================================================= */
-
-function formatNumber(
-  value: number
-) {
-  return value.toLocaleString(
-    undefined,
-    {
-      maximumFractionDigits: 2,
-    }
-  );
-}
-
-function formatMaterialValue(
-  material: string,
-  amount: number
-) {
-  if (
-    material ===
-    "coinsQd"
-  ) {
-    return `${formatNumber(
-      amount
-    )}Qd`;
-  }
-
-  return formatNumber(
-    amount
-  );
-}
-
-function formatHours(
-  value: number
-) {
-  if (
-    Number.isInteger(
-      value
-    )
-  ) {
-    return `${value}h`;
-  }
-
-  return `${formatNumber(
-    value
-  )}h`;
-}
-
-function getMaterialLabel(
-  material: string
-) {
-  if (
-    MATERIAL_LABELS[
-      material
-    ]
-  ) {
-    return MATERIAL_LABELS[
-      material
-    ];
-  }
-
-  return material
-    .replace(
-      /([A-Z])/g,
-      " $1"
-    )
-    .replace(
-      /^./,
-      (
-        character
-      ) =>
-        character.toUpperCase()
-    );
-}
 
 function getHelmetIndex(
   id: string
@@ -269,104 +98,6 @@ function getHelmetIndex(
       helmet.id ===
       id
   );
-}
-
-/* =========================================================
-   COMPACTED ITEMS
-   ========================================================= */
-
-function getDirectCompactedItem(
-  material: string
-) {
-  return compactedItems.find(
-    (
-      item
-    ) =>
-      item.id ===
-      material
-  );
-}
-
-function getExpandedRequirement(
-  requirement: Requirement
-): ExpandedRequirement | null {
-  const direct =
-    getDirectCompactedItem(
-      requirement.material
-    );
-
-  if (
-    direct
-  ) {
-    return {
-      compactedItem:
-        direct,
-
-      isPlasma:
-        false,
-
-      amount:
-        requirement.amount,
-
-      ingredients:
-        direct.requirements.map(
-          (
-            ingredient
-          ) => ({
-            material:
-              ingredient.material,
-
-            amount:
-              ingredient.amount *
-              requirement.amount,
-          })
-        ),
-
-      timeHours:
-        direct.timeHours *
-        requirement.amount,
-    };
-  }
-
-  const underlying =
-    getUnderlyingCompactedItem(
-      requirement.material
-    );
-
-  if (
-    underlying
-  ) {
-    return {
-      compactedItem:
-        underlying,
-
-      isPlasma:
-        true,
-
-      amount:
-        requirement.amount,
-
-      ingredients:
-        underlying.requirements.map(
-          (
-            ingredient
-          ) => ({
-            material:
-              ingredient.material,
-
-            amount:
-              ingredient.amount *
-              requirement.amount,
-          })
-        ),
-
-      timeHours:
-        underlying.timeHours *
-        requirement.amount,
-    };
-  }
-
-  return null;
 }
 
 /* =========================================================
@@ -775,60 +506,11 @@ export default function HelmetsPage() {
      the highest completed upgrade is still required.
      ======================================================= */
 
-  const remainingMaterialTotals =
-    useMemo(() => {
-      const totals =
-        new Map<
-          string,
-          number
-        >();
-
-      const remainingHelmets =
-        typedHelmets.slice(
-          highestCompletedIndex +
-            1
-        );
-
-      remainingHelmets.forEach(
-        (
-          helmet
-        ) => {
-          helmet.requirements.forEach(
-            (
-              requirement
-            ) => {
-              totals.set(
-                requirement.material,
-
-                (
-                  totals.get(
-                    requirement.material
-                  ) ??
-                  0
-                ) +
-                  requirement.amount
-              );
-            }
-          );
-        }
-      );
-
-      return Array.from(
-        totals.entries()
-      ).map(
-        (
-          [
-            material,
-            amount,
-          ]
-        ): MaterialTotal => ({
-          material,
-          amount,
-        })
-      );
-    }, [
-      highestCompletedIndex,
-    ]);
+  const remainingMaterialTotals = useMemo(
+    () => getMaterialSummary(typedHelmets.slice(highestCompletedIndex + 1)
+      .flatMap(helmet => helmet.requirements)),
+    [highestCompletedIndex]
+  );
 
   /* =======================================================
      TOGGLE UPGRADE
@@ -1005,7 +687,7 @@ export default function HelmetsPage() {
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 
-            <OverviewStat
+            <OverviewStat variant="rank"
               label="Current Upgrade"
 
               value={
@@ -1033,7 +715,7 @@ export default function HelmetsPage() {
               }
             />
 
-            <OverviewStat
+            <OverviewStat variant="rank"
               label="Next Upgrade"
 
               value={
@@ -1061,7 +743,7 @@ export default function HelmetsPage() {
               }
             />
 
-            <OverviewStat
+            <OverviewStat variant="rank"
               label="Completed"
 
               value={`${completedCount} / ${typedHelmets.length}`}
@@ -1069,7 +751,7 @@ export default function HelmetsPage() {
               description="Helmet upgrades obtained"
             />
 
-            <OverviewStat
+            <OverviewStat variant="rank"
               label="Progress"
 
               value={`${Math.round(
@@ -1432,66 +1114,11 @@ export default function HelmetsPage() {
           buttonClass="bg-[#30432d] text-[#b9dfaf]"
         >
 
-          <div className="rounded-2xl border border-white/10 bg-black/10 p-4 md:p-5">
-
-            <div>
-
-              <h3 className="text-lg font-bold">
-                Remaining Materials
-              </h3>
-
-              <p className="mt-1 text-xs text-white/35">
-                Everything still required from your next helmet upgrade through Sunsuit Helmet 5.
-              </p>
-
-            </div>
-
-            {remainingMaterialTotals.length >
-            0 ? (
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
-                {remainingMaterialTotals.map(
-                  (
-                    total
-                  ) => (
-
-                    <MaterialBox
-                      key={
-                        total.material
-                      }
-
-                      material={
-                        total.material
-                      }
-
-                      amount={
-                        total.amount
-                      }
-                    />
-
-                  )
-                )}
-
-              </div>
-
-            ) : (
-
-              <div className="mt-4 rounded-xl border border-white/10 bg-black/10 p-5 text-center">
-
-                <p className="font-semibold text-[#b9dfaf]">
-                  All helmets completed
-                </p>
-
-                <p className="mt-1 text-sm text-white/35">
-                  You have no remaining helmet materials.
-                </p>
-
-              </div>
-
-            )}
-
-          </div>
+          <MaterialTotals
+            summary={remainingMaterialTotals}
+            description="Cumulative requirements from your next helmet upgrade through the final helmet."
+            emptyMessage="All helmets completed. You have no remaining helmet materials."
+          />
 
         </MainSection>
 
@@ -1602,61 +1229,22 @@ function HelmetSection({
   onToggle: () => void;
   children: ReactNode;
 }) {
-  const theme =
-    getHelmetTheme(
-      region
-    );
+  const theme = getHelmetTheme(region);
 
   return (
-
-    <section
-      className={`mb-6 overflow-hidden rounded-2xl border ${theme.border} ${theme.background}`}
+    <MainSection
+      eyebrow={eyebrow}
+      title={title}
+      open={open}
+      onToggle={onToggle}
+      borderClass={theme.border}
+      backgroundClass={theme.background}
+      accentClass={theme.accent}
+      buttonClass={theme.button}
+      contentClassName="border-t border-white/10 p-4 md:p-5"
     >
-
-      <button
-        type="button"
-
-        onClick={
-          onToggle
-        }
-
-        className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left md:px-6"
-      >
-
-        <div>
-
-          <p
-            className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${theme.accent}`}
-          >
-            {eyebrow}
-          </p>
-
-          <h2 className="mt-2 text-2xl font-bold">
-            {title}
-          </h2>
-
-        </div>
-
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl font-bold ${theme.button}`}
-        >
-          {open
-            ? "−"
-            : "+"}
-        </span>
-
-      </button>
-
-      {open && (
-
-        <div className="border-t border-white/10 p-4 md:p-5">
-          {children}
-        </div>
-
-      )}
-
-    </section>
-
+      {children}
+    </MainSection>
   );
 }
 
@@ -2021,164 +1609,6 @@ function RequirementDisplay({
   );
 }
 
-/* =========================================================
-   MATERIAL BOX
-   ========================================================= */
-
-function MaterialBox({
-  material,
-  amount,
-}: {
-  material: string;
-  amount: number;
-}) {
-  return (
-
-    <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
-        {getMaterialLabel(
-          material
-        )}
-      </p>
-
-      <p className="mt-1 text-lg font-bold">
-        {formatMaterialValue(
-          material,
-          amount
-        )}
-      </p>
-
-    </div>
-
-  );
-}
-
-/* =========================================================
-   MAIN SECTION
-   ========================================================= */
-
-function MainSection({
-  eyebrow,
-  title,
-  open,
-  onToggle,
-  borderClass,
-  backgroundClass,
-  accentClass,
-  buttonClass,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  borderClass: string;
-  backgroundClass: string;
-  accentClass: string;
-  buttonClass: string;
-  children: ReactNode;
-}) {
-  return (
-
-    <section
-      className={`mb-6 overflow-hidden rounded-2xl border ${borderClass} ${backgroundClass}`}
-    >
-
-      <button
-        type="button"
-
-        onClick={
-          onToggle
-        }
-
-        className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left md:px-6"
-      >
-
-        <div>
-
-          <p
-            className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${accentClass}`}
-          >
-            {eyebrow}
-          </p>
-
-          <h2 className="mt-2 text-2xl font-bold">
-            {title}
-          </h2>
-
-        </div>
-
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl font-bold ${buttonClass}`}
-        >
-          {open
-            ? "−"
-            : "+"}
-        </span>
-
-      </button>
-
-      {open && (
-
-        <div className="border-t border-white/10 p-5 md:p-6">
-          {children}
-        </div>
-
-      )}
-
-    </section>
-
-  );
-}
-
-/* =========================================================
-   OVERVIEW STAT
-   ========================================================= */
-
-function OverviewStat({
-  label,
-  value,
-  description,
-  stars,
-}: {
-  label: string;
-  value: string;
-  description: string;
-  stars?: ReactNode;
-}) {
-  return (
-
-    <div className="rounded-xl border border-white/10 bg-black/10 p-4">
-
-      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">
-        {label}
-      </p>
-
-      {value ? (
-
-        <p className="mt-2 break-words text-xl font-bold">
-          {value}
-        </p>
-
-      ) : null}
-
-      {stars && (
-
-        <div className="mt-2">
-          {stars}
-        </div>
-
-      )}
-
-      <p className="mt-2 text-xs text-white/30">
-        {description}
-      </p>
-
-    </div>
-
-  );
-}
 
 /* =========================================================
    TYPE BADGE

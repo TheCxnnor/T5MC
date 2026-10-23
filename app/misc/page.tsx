@@ -15,6 +15,15 @@ import {
   type Quickwarp,
 } from "../../data/misc";
 
+import {
+  getMaterialLabel,
+} from "../../lib/materials";
+import { formatMaterialValue, formatNumber } from "../../lib/format";
+import { CollapsibleSection, GroupSection } from "../../components/ui/CollapsibleSection";
+import { OverviewStat } from "../../components/ui/StatCards";
+import { MaterialTotals } from "../../components/ui/MaterialTotals";
+import { getMaterialSummary, getDirectCoreRequirements } from "../../lib/materialTotals";
+
 /* =========================================================
    TYPES
    ========================================================= */
@@ -30,11 +39,6 @@ type OpenSections = {
 type SavedState = {
   completed: string[];
   openSections: OpenSections;
-};
-
-type MaterialTotal = {
-  material: string;
-  amount: number;
 };
 
 /* =========================================================
@@ -61,156 +65,6 @@ const DEFAULT_STATE: SavedState = {
   openSections:
     DEFAULT_OPEN_SECTIONS,
 };
-
-/* =========================================================
-   MATERIAL LABELS
-   ========================================================= */
-
-const MATERIAL_LABELS: Record<
-  string,
-  string
-> = {
-  lunarFragment:
-    "Lunar Fragment",
-
-  chisiliteShard:
-    "Chisilite Shard",
-
-  basaltShard:
-    "Basalt Shard",
-
-  breccaPowder:
-    "Brecca Powder",
-
-  amberFragment:
-    "Amber Fragment",
-
-  ametrine:
-    "Ametrine",
-
-  martianDust:
-    "Martian Dust",
-
-  rhodnite:
-    "Rhodnite",
-
-  plasmaShard:
-    "Plasma Shard",
-
-  fiber:
-    "Fiber",
-
-  magma:
-    "Magma",
-
-  starShards:
-    "Star-Shards",
-
-  coinsT:
-    "Coins",
-
-  researchCore1:
-    "Research Core 1★",
-
-  regolithSoil:
-    "Regolith Soil",
-
-  redroot:
-    "Redroot",
-
-  ash:
-    "Ash",
-};
-
-/* =========================================================
-   HELPERS
-   ========================================================= */
-
-function formatNumber(
-  value: number
-) {
-  return value.toLocaleString(
-    undefined,
-    {
-      maximumFractionDigits: 2,
-    }
-  );
-}
-
-function getMaterialLabel(
-  material: string
-) {
-  if (
-    MATERIAL_LABELS[
-      material
-    ]
-  ) {
-    return MATERIAL_LABELS[
-      material
-    ];
-  }
-
-  return material
-    .replace(
-      /([A-Z])/g,
-      " $1"
-    )
-    .replace(
-      /^./,
-      (
-        character
-      ) =>
-        character.toUpperCase()
-    );
-}
-
-/* =========================================================
-   MATERIAL VALUE FORMATTER
-   ========================================================= */
-
-function formatMaterialValue(
-  material: string,
-  amount: number
-) {
-  if (
-    material ===
-    "coinsT"
-  ) {
-    return `${formatNumber(
-      amount
-    )}T`;
-  }
-
-  return formatNumber(
-    amount
-  );
-}
-
-function addRequirements(
-  totals: Map<
-    string,
-    number
-  >,
-  requirements: MiscRequirement[]
-) {
-  requirements.forEach(
-    (
-      requirement
-    ) => {
-      totals.set(
-        requirement.material,
-
-        (
-          totals.get(
-            requirement.material
-          ) ??
-          0
-        ) +
-          requirement.amount
-      );
-    }
-  );
-}
 
 /* =========================================================
    PAGE
@@ -384,90 +238,12 @@ export default function MiscPage() {
      REMAINING MATERIALS
      ======================================================= */
 
-  const remainingMaterialTotals =
-    useMemo(() => {
-      const totals =
-        new Map<
-          string,
-          number
-        >();
-
-      o2Tanks
-        .filter(
-          (
-            tank
-          ) =>
-            !completedSet.has(
-              tank.id
-            )
-        )
-        .forEach(
-          (
-            tank
-          ) => {
-            addRequirements(
-              totals,
-              tank.requirements
-            );
-          }
-        );
-
-      quickwarps
-        .filter(
-          (
-            quickwarp
-          ) =>
-            !completedSet.has(
-              quickwarp.id
-            )
-        )
-        .forEach(
-          (
-            quickwarp
-          ) => {
-            addRequirements(
-              totals,
-              quickwarp.requirements
-            );
-          }
-        );
-
-      miscItems
-        .filter(
-          (
-            item
-          ) =>
-            !completedSet.has(
-              item.id
-            )
-        )
-        .forEach(
-          (
-            item
-          ) => {
-            addRequirements(
-              totals,
-              item.requirements
-            );
-          }
-        );
-
-      return Array.from(
-        totals.entries()
-      ).map(
-        (
-          [
-            material,
-            amount,
-          ]
-        ): MaterialTotal => ({
-          material,
-          amount,
-        })
-      );
-    }, [
-      completedSet,
-    ]);
+  const remainingMaterialTotals = useMemo(
+    () => getMaterialSummary([...o2Tanks, ...quickwarps, ...miscItems]
+      .filter(item => !completedSet.has(item.id))
+      .flatMap(item => getDirectCoreRequirements(item.requirements))),
+    [completedSet]
+  );
 
   /* =======================================================
      TOGGLE ITEM
@@ -648,33 +424,33 @@ export default function MiscPage() {
             )
           }
 
-          border="border-[#536272]"
-          background="bg-[#1e252d]"
-          accent="text-[#a8bad0]"
-          button="bg-[#293440] text-[#b9c9dc]"
+          borderClass="border-[#536272]"
+          backgroundClass="bg-[#1e252d]"
+          accentClass="text-[#a8bad0]"
+          buttonClass="bg-[#293440] text-[#b9c9dc]"
         >
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 
-            <OverviewStat
+            <OverviewStat variant="plain"
               label="Completed"
               value={`${completedCount} / ${totalItems}`}
               description="Total items obtained"
             />
 
-            <OverviewStat
+            <OverviewStat variant="plain"
               label="O₂ Tanks"
               value={`${tankCompleted} / ${o2Tanks.length}`}
               description="Tank upgrades obtained"
             />
 
-            <OverviewStat
+            <OverviewStat variant="plain"
               label="Quickwarps"
               value={`${quickwarpCompleted} / ${quickwarps.length}`}
               description="Quickwarps unlocked"
             />
 
-            <OverviewStat
+            <OverviewStat variant="plain"
               label="Other Items"
               value={`${miscCompleted} / ${miscItems.length}`}
               description="Miscellaneous items obtained"
@@ -1016,72 +792,17 @@ export default function MiscPage() {
             )
           }
 
-          border="border-[#56734f]"
-          background="bg-[#202a20]"
-          accent="text-[#a9cf9f]"
-          button="bg-[#30432d] text-[#b9dfaf]"
+          borderClass="border-[#56734f]"
+          backgroundClass="bg-[#202a20]"
+          accentClass="text-[#a9cf9f]"
+          buttonClass="bg-[#30432d] text-[#b9dfaf]"
         >
 
-          <div className="rounded-2xl border border-white/10 bg-black/10 p-4 md:p-5">
-
-            <div>
-
-              <h3 className="text-lg font-bold">
-                Remaining Materials
-              </h3>
-
-              <p className="mt-1 text-xs text-white/35">
-                Everything still required for items you have not marked complete.
-              </p>
-
-            </div>
-
-            {remainingMaterialTotals.length >
-            0 ? (
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
-                {remainingMaterialTotals.map(
-                  (
-                    total
-                  ) => (
-
-                    <MaterialBox
-                      key={
-                        total.material
-                      }
-
-                      material={
-                        total.material
-                      }
-
-                      amount={
-                        total.amount
-                      }
-                    />
-
-                  )
-                )}
-
-              </div>
-
-            ) : (
-
-              <div className="mt-4 rounded-xl border border-white/10 bg-black/10 p-5 text-center">
-
-                <p className="font-semibold text-[#b9dfaf]">
-                  Everything completed
-                </p>
-
-                <p className="mt-1 text-sm text-white/35">
-                  You have no remaining materials on this page.
-                </p>
-
-              </div>
-
-            )}
-
-          </div>
+          <MaterialTotals
+            summary={remainingMaterialTotals}
+            description="Cumulative requirements for all remaining O₂ tanks, quickwarps and miscellaneous items."
+            emptyMessage="Everything completed. You have no remaining materials on this page."
+          />
 
         </CollapsibleSection>
 
@@ -1293,280 +1014,6 @@ function RequirementRow({
   );
 }
 
-/* =========================================================
-   MATERIAL BOX
-
-   Same visual style used on Drills and Armor.
-   ========================================================= */
-
-function MaterialBox({
-  material,
-  amount,
-}: {
-  material: string;
-  amount: number;
-}) {
-  return (
-
-    <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
-        {getMaterialLabel(
-          material
-        )}
-      </p>
-
-      <p className="mt-1 text-lg font-bold">
-        {formatMaterialValue(
-          material,
-          amount
-        )}
-      </p>
-
-    </div>
-
-  );
-}
-
-/* =========================================================
-   GROUP SECTION
-   ========================================================= */
-
-function GroupSection({
-  eyebrow,
-  title,
-  open,
-  onToggle,
-  completed,
-  total,
-  onToggleAll,
-  border,
-  background,
-  accent,
-  badge,
-  button,
-  checkbox,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  completed: number;
-  total: number;
-  onToggleAll: () => void;
-  border: string;
-  background: string;
-  accent: string;
-  badge: string;
-  button: string;
-  checkbox: string;
-  children: ReactNode;
-}) {
-  const allComplete =
-    completed ===
-    total;
-
-  return (
-
-    <section
-      className={`mb-6 overflow-hidden rounded-2xl border ${border} ${background}`}
-    >
-
-      <div className="flex items-center justify-between gap-4 px-5 py-5 md:px-6">
-
-        <button
-          type="button"
-
-          onClick={
-            onToggle
-          }
-
-          className="min-w-0 flex-1 text-left"
-        >
-
-          <p
-            className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${accent}`}
-          >
-            {eyebrow}
-          </p>
-
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-
-            <h2 className="text-2xl font-bold">
-              {title}
-            </h2>
-
-            <span
-              className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${badge}`}
-            >
-              {completed} / {total}
-            </span>
-
-          </div>
-
-        </button>
-
-        <div className="flex shrink-0 items-center gap-3">
-
-          <button
-            type="button"
-
-            onClick={
-              onToggleAll
-            }
-
-            className={`flex h-8 w-8 items-center justify-center rounded-md border text-sm font-bold ${
-              allComplete
-                ? `${checkbox} border-transparent`
-                : "border-white/20 bg-black/10 text-transparent"
-            }`}
-          >
-            ✓
-          </button>
-
-          <button
-            type="button"
-
-            onClick={
-              onToggle
-            }
-
-            className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl font-bold ${button}`}
-          >
-            {open
-              ? "−"
-              : "+"}
-          </button>
-
-        </div>
-
-      </div>
-
-      {open && (
-
-        <div className="border-t border-white/10 p-4 md:p-5">
-          {children}
-        </div>
-
-      )}
-
-    </section>
-
-  );
-}
-
-/* =========================================================
-   COLLAPSIBLE SECTION
-   ========================================================= */
-
-function CollapsibleSection({
-  eyebrow,
-  title,
-  open,
-  onToggle,
-  border,
-  background,
-  accent,
-  button,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  border: string;
-  background: string;
-  accent: string;
-  button: string;
-  children: ReactNode;
-}) {
-  return (
-
-    <section
-      className={`mb-6 overflow-hidden rounded-2xl border ${border} ${background}`}
-    >
-
-      <button
-        type="button"
-
-        onClick={
-          onToggle
-        }
-
-        className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left md:px-6"
-      >
-
-        <div>
-
-          <p
-            className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${accent}`}
-          >
-            {eyebrow}
-          </p>
-
-          <h2 className="mt-2 text-2xl font-bold">
-            {title}
-          </h2>
-
-        </div>
-
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl font-bold ${button}`}
-        >
-          {open
-            ? "−"
-            : "+"}
-        </span>
-
-      </button>
-
-      {open && (
-
-        <div className="border-t border-white/10 p-5 md:p-6">
-          {children}
-        </div>
-
-      )}
-
-    </section>
-
-  );
-}
-
-/* =========================================================
-   OVERVIEW STAT
-   ========================================================= */
-
-function OverviewStat({
-  label,
-  value,
-  description,
-}: {
-  label: string;
-  value: string;
-  description: string;
-}) {
-  return (
-
-    <div className="rounded-xl border border-white/10 bg-black/10 p-4">
-
-      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">
-        {label}
-      </p>
-
-      <p className="mt-2 text-xl font-bold">
-        {value}
-      </p>
-
-      <p className="mt-1 text-xs text-white/30">
-        {description}
-      </p>
-
-    </div>
-
-  );
-}
 
 /* =========================================================
    QUICKWARP THEMES

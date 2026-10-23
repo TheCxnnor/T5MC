@@ -10,10 +10,14 @@ import {
 import { drills } from "../../data/drills";
 
 import {
-  compactedItems,
-  getUnderlyingCompactedItem,
-  type CompactedItem,
-} from "../../data/compactedItems";
+  getExpandedRequirement,
+  getMaterialLabel as getSharedMaterialLabel,
+} from "../../lib/materials";
+import { formatHours, formatNumber } from "../../lib/format";
+import { CollapsibleSection as MainSection } from "../../components/ui/CollapsibleSection";
+import { OverviewStat } from "../../components/ui/StatCards";
+import { MaterialTotals } from "../../components/ui/MaterialTotals";
+import { getMaterialSummary } from "../../lib/materialTotals";
 
 /* =========================================================
    TYPES
@@ -55,19 +59,6 @@ type SavedState = {
   obtained: string[];
   targetDrillId: string;
   openSections: OpenSections;
-};
-
-type MaterialTotal = {
-  material: string;
-  amount: number;
-};
-
-type ExpandedRequirement = {
-  compactedItem: CompactedItem;
-  isPlasma: boolean;
-  amount: number;
-  ingredients: MaterialTotal[];
-  timeHours: number;
 };
 
 /* =========================================================
@@ -116,105 +107,6 @@ const DEFAULT_STATE: SavedState = {
 };
 
 /* =========================================================
-   MATERIAL LABELS
-   ========================================================= */
-
-const MATERIAL_LABELS: Record<
-  string,
-  string
-> = {
-  lunarFragment:
-    "Lunar Fragment",
-
-  chisiliteShard:
-    "Chisilite Shard",
-
-  basaltShard:
-    "Basalt Shard",
-
-  breccaPowder:
-    "Brecca Powder",
-
-  magma:
-    "Magma",
-
-  rhodnite:
-    "Rhodnite",
-
-  martianDust:
-    "Martian Dust",
-
-  amberFragment:
-    "Amber Fragment",
-
-  ametrine:
-    "Ametrine",
-
-  sunFragment:
-    "Sun Fragment",
-
-  plasmaShard:
-    "Plasma Shard",
-
-  fiber:
-    "Fiber",
-
-  compactedLunarAlloy:
-    "Compacted Lunar Alloy",
-
-  compactedMartianAlloy:
-    "Compacted Martian Alloy",
-
-  compactedSolarAlloy:
-    "Compacted Solar Alloy",
-
-  plasmaCompactedLunarAlloy:
-    "Plasma Compacted Lunar Alloy",
-
-  plasmaCompactedMartianAlloy:
-    "Plasma Compacted Martian Alloy",
-
-  plasmaCompactedSolarAlloy:
-    "Plasma Compacted Solar Alloy",
-
-  compactedMagma:
-    "Compacted Magma",
-
-  plasmaCompactedMagma:
-    "Plasma Compacted Magma",
-
-  coronaSurgeFlare:
-    "Corona Surge Flare",
-
-  stellarPulseFlare:
-    "Stellar Pulse Flare",
-
-  eternalSingularityFlare:
-    "Eternal Singularity Flare",
-
-  levels:
-    "Levels",
-
-  starShards:
-    "Star-Shards",
-
-  ash:
-    "Ash",
-
-  candy:
-    "Candy",
-
-  serpentSkin:
-    "Serpent Skin",
-
-  coinsQd:
-    "Qd Coins",
-
-  ascensions:
-    "Ascensions",
-};
-
-/* =========================================================
    REGION ORDER
    ========================================================= */
 
@@ -228,58 +120,8 @@ const REGION_ORDER: Region[] = [
    HELPERS
    ========================================================= */
 
-function formatNumber(
-  value: number
-) {
-  return value.toLocaleString(
-    undefined,
-    {
-      maximumFractionDigits: 2,
-    }
-  );
-}
-
-function formatHours(
-  value: number
-) {
-  if (
-    Number.isInteger(
-      value
-    )
-  ) {
-    return `${value}h`;
-  }
-
-  return `${formatNumber(
-    value
-  )}h`;
-}
-
-function getMaterialLabel(
-  material: string
-) {
-  if (
-    MATERIAL_LABELS[
-      material
-    ]
-  ) {
-    return MATERIAL_LABELS[
-      material
-    ];
-  }
-
-  return material
-    .replace(
-      /([A-Z])/g,
-      " $1"
-    )
-    .replace(
-      /^./,
-      (
-        character
-      ) =>
-        character.toUpperCase()
-    );
+function getMaterialLabel(material: string) {
+  return getSharedMaterialLabel(material, { coinsQd: "Qd Coins" });
 }
 
 function getRegionLabel(
@@ -329,104 +171,6 @@ function getProgressPercentage(
     typedDrills.length
   ) *
     100;
-}
-
-/* =========================================================
-   COMPACTED ITEM HELPERS
-   ========================================================= */
-
-function getDirectCompactedItem(
-  material: string
-) {
-  return compactedItems.find(
-    (
-      item
-    ) =>
-      item.id ===
-      material
-  );
-}
-
-function getExpandedRequirement(
-  requirement: Requirement
-): ExpandedRequirement | null {
-  const direct =
-    getDirectCompactedItem(
-      requirement.material
-    );
-
-  if (
-    direct
-  ) {
-    return {
-      compactedItem:
-        direct,
-
-      isPlasma:
-        false,
-
-      amount:
-        requirement.amount,
-
-      ingredients:
-        direct.requirements.map(
-          (
-            ingredient
-          ) => ({
-            material:
-              ingredient.material,
-
-            amount:
-              ingredient.amount *
-              requirement.amount,
-          })
-        ),
-
-      timeHours:
-        direct.timeHours *
-        requirement.amount,
-    };
-  }
-
-  const underlying =
-    getUnderlyingCompactedItem(
-      requirement.material
-    );
-
-  if (
-    underlying
-  ) {
-    return {
-      compactedItem:
-        underlying,
-
-      isPlasma:
-        true,
-
-      amount:
-        requirement.amount,
-
-      ingredients:
-        underlying.requirements.map(
-          (
-            ingredient
-          ) => ({
-            material:
-              ingredient.material,
-
-            amount:
-              ingredient.amount *
-              requirement.amount,
-          })
-        ),
-
-      timeHours:
-        underlying.timeHours *
-        requirement.amount,
-    };
-  }
-
-  return null;
 }
 
 /* =========================================================
@@ -664,169 +408,10 @@ export default function DrillsPage() {
      DIRECT TARGET TOTALS
      ======================================================= */
 
-  const targetMaterialTotals =
-    useMemo(() => {
-      const totals =
-        new Map<
-          string,
-          number
-        >();
-
-      drillsToTarget.forEach(
-        (
-          drill
-        ) => {
-          drill.requirements.forEach(
-            (
-              requirement
-            ) => {
-              totals.set(
-                requirement.material,
-
-                (
-                  totals.get(
-                    requirement.material
-                  ) ??
-                  0
-                ) +
-                  requirement.amount
-              );
-            }
-          );
-        }
-      );
-
-      return Array.from(
-        totals.entries()
-      ).map(
-        (
-          [
-            material,
-            amount,
-          ]
-        ): MaterialTotal => ({
-          material,
-          amount,
-        })
-      );
-    }, [
-      drillsToTarget,
-    ]);
-
-  /* =======================================================
-     FULLY EXPANDED TARGET TOTALS
-     ======================================================= */
-
-  const expandedTargetTotals =
-    useMemo(() => {
-      const totals =
-        new Map<
-          string,
-          number
-        >();
-
-      let totalCompactionHours =
-        0;
-
-      drillsToTarget.forEach(
-        (
-          drill
-        ) => {
-          drill.requirements.forEach(
-            (
-              requirement
-            ) => {
-              const expanded =
-                getExpandedRequirement(
-                  requirement
-                );
-
-              if (
-                expanded
-              ) {
-                totalCompactionHours +=
-                  expanded.timeHours;
-
-                expanded.ingredients.forEach(
-                  (
-                    ingredient
-                  ) => {
-                    totals.set(
-                      ingredient.material,
-
-                      (
-                        totals.get(
-                          ingredient.material
-                        ) ??
-                        0
-                      ) +
-                        ingredient.amount
-                    );
-                  }
-                );
-
-                return;
-              }
-
-              totals.set(
-                requirement.material,
-
-                (
-                  totals.get(
-                    requirement.material
-                  ) ??
-                  0
-                ) +
-                  requirement.amount
-              );
-            }
-          );
-        }
-      );
-
-      return {
-        materials:
-          Array.from(
-            totals.entries()
-          ).map(
-            (
-              [
-                material,
-                amount,
-              ]
-            ): MaterialTotal => ({
-              material,
-              amount,
-            })
-          ),
-
-        totalCompactionHours,
-      };
-    }, [
-      drillsToTarget,
-    ]);
-
-  /* =======================================================
-     COMPACTED ITEMS USED IN TARGET
-     ======================================================= */
-
-  const compactedTargetTotals =
-    useMemo(() => {
-      return targetMaterialTotals.filter(
-        (
-          total
-        ) =>
-          getExpandedRequirement({
-            material:
-              total.material,
-
-            amount:
-              total.amount,
-          }) !== null
-      );
-    }, [
-      targetMaterialTotals,
-    ]);
+  const targetMaterialTotals = useMemo(
+    () => getMaterialSummary(drillsToTarget.flatMap(drill => drill.requirements)),
+    [drillsToTarget]
+  );
 
   /* =======================================================
      REGION GROUPS
@@ -878,94 +463,10 @@ export default function DrillsPage() {
       highestObtainedIndex,
     ]);
 
-  const remainingMaterialTotals =
-    useMemo(() => {
-      const totals =
-        new Map<
-          string,
-          number
-        >();
-
-      let totalCompactionHours =
-        0;
-
-      remainingDrills.forEach(
-        (
-          drill
-        ) => {
-          drill.requirements.forEach(
-            (
-              requirement
-            ) => {
-              const expanded =
-                getExpandedRequirement(
-                  requirement
-                );
-
-              if (
-                expanded
-              ) {
-                totalCompactionHours +=
-                  expanded.timeHours;
-
-                expanded.ingredients.forEach(
-                  (
-                    ingredient
-                  ) => {
-                    totals.set(
-                      ingredient.material,
-
-                      (
-                        totals.get(
-                          ingredient.material
-                        ) ??
-                        0
-                      ) +
-                        ingredient.amount
-                    );
-                  }
-                );
-
-                return;
-              }
-
-              totals.set(
-                requirement.material,
-
-                (
-                  totals.get(
-                    requirement.material
-                  ) ??
-                  0
-                ) +
-                  requirement.amount
-              );
-            }
-          );
-        }
-      );
-
-      return {
-        materials:
-          Array.from(
-            totals.entries()
-          ).map(
-            (
-              [
-                material,
-                amount,
-              ]
-            ): MaterialTotal => ({
-              material,
-              amount,
-            })
-          ),
-
-        totalCompactionHours,
-      };
-    }, [
-      remainingDrills,
-    ]);
+  const remainingMaterialTotals = useMemo(
+    () => getMaterialSummary(remainingDrills.flatMap(drill => drill.requirements)),
+    [remainingDrills]
+  );
 
   /* =======================================================
      TOGGLE DRILL
@@ -1498,7 +999,7 @@ export default function DrillsPage() {
               <PlannerSection
                 title="Materials Required"
 
-                subtitle="Raw materials, compacted items and compaction time"
+                subtitle="Raw materials, currencies and crafting totals"
 
                 open={
                   state
@@ -1511,104 +1012,13 @@ export default function DrillsPage() {
                     "targetMaterials"
                   )
                 }
-
-                rightContent={
-                  <div className="rounded-xl border border-[#d2b568]/25 bg-black/10 px-4 py-2 text-right">
-
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">
-                      Total Compaction
-                    </p>
-
-                    <p className="mt-1 text-lg font-bold text-[#e3ca80]">
-                      {formatHours(
-                        expandedTargetTotals.totalCompactionHours
-                      )}
-                    </p>
-
-                  </div>
-                }
               >
 
-                <div>
-
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#dfc578]">
-                    Total Raw Materials
-                  </p>
-
-                  <p className="mt-1 text-xs text-white/35">
-                    Includes the materials needed to create all compacted and plasma-compacted items.
-                  </p>
-
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
-                    {expandedTargetTotals.materials.map(
-                      (
-                        total
-                      ) => (
-
-                        <MaterialBox
-                          key={
-                            total.material
-                          }
-
-                          material={
-                            total.material
-                          }
-
-                          amount={
-                            total.amount
-                          }
-                        />
-
-                      )
-                    )}
-
-                  </div>
-
-                </div>
-
-                {compactedTargetTotals.length >
-                  0 && (
-
-                  <div className="mt-6 border-t border-white/10 pt-5">
-
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
-                      Compacted Items Required
-                    </p>
-
-                    <p className="mt-1 text-xs text-white/30">
-                      These quantities are already included in the raw material totals above.
-                    </p>
-
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
-                      {compactedTargetTotals.map(
-                        (
-                          total
-                        ) => (
-
-                          <MaterialBox
-                            key={
-                              total.material
-                            }
-
-                            material={
-                              total.material
-                            }
-
-                            amount={
-                              total.amount
-                            }
-                          />
-
-                        )
-                      )}
-
-                    </div>
-
-                  </div>
-
-                )}
+                <MaterialTotals
+                  summary={targetMaterialTotals}
+                  title="Raw Materials"
+                  description="Cumulative requirements from your next drill through your selected target."
+                />
 
               </PlannerSection>
 
@@ -1758,84 +1168,11 @@ export default function DrillsPage() {
           buttonClass="bg-[#30432d] text-[#b9dfaf]"
         >
 
-          <div className="rounded-2xl border border-white/10 bg-black/10 p-4 md:p-5">
-
-            <div className="flex flex-wrap items-start justify-between gap-4">
-
-              <div>
-
-                <h3 className="text-lg font-bold">
-                  Remaining Materials
-                </h3>
-
-                <p className="mt-1 text-xs text-white/35">
-                  Everything still required from your next drill through Fusion Drill.
-                </p>
-
-              </div>
-
-              <div className="rounded-xl border border-[#8ca87f]/20 bg-black/10 px-4 py-3 text-right">
-
-                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">
-                  Remaining Compaction
-                </p>
-
-                <p className="mt-1 text-lg font-bold text-[#b9dfaf]">
-                  {formatHours(
-                    remainingMaterialTotals.totalCompactionHours
-                  )}
-                </p>
-
-              </div>
-
-            </div>
-
-            {remainingMaterialTotals.materials.length >
-            0 ? (
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
-                {remainingMaterialTotals.materials.map(
-                  (
-                    total
-                  ) => (
-
-                    <MaterialBox
-                      key={
-                        total.material
-                      }
-
-                      material={
-                        total.material
-                      }
-
-                      amount={
-                        total.amount
-                      }
-                    />
-
-                  )
-                )}
-
-              </div>
-
-            ) : (
-
-              <div className="mt-4 rounded-xl border border-white/10 bg-black/10 p-5 text-center">
-
-                <p className="font-semibold text-[#b9dfaf]">
-                  All drills completed
-                </p>
-
-                <p className="mt-1 text-sm text-white/35">
-                  You have no remaining drill materials.
-                </p>
-
-              </div>
-
-            )}
-
-          </div>
+          <MaterialTotals
+            summary={remainingMaterialTotals}
+            description="Cumulative requirements from your next drill through Fusion Drill."
+            emptyMessage="All drills completed. You have no remaining drill materials."
+          />
 
         </MainSection>
 
@@ -2127,83 +1464,7 @@ function PlannerSection({
   );
 }
 
-/* =========================================================
-   MAIN SECTION
-   ========================================================= */
 
-function MainSection({
-  eyebrow,
-  title,
-  open,
-  onToggle,
-  borderClass,
-  backgroundClass,
-  accentClass,
-  buttonClass,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  borderClass: string;
-  backgroundClass: string;
-  accentClass: string;
-  buttonClass: string;
-  children: ReactNode;
-}) {
-  return (
-
-    <section
-      className={`mb-6 overflow-hidden rounded-2xl border ${borderClass} ${backgroundClass}`}
-    >
-
-      <button
-        type="button"
-
-        onClick={
-          onToggle
-        }
-
-        className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left md:px-6"
-      >
-
-        <div>
-
-          <p
-            className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${accentClass}`}
-          >
-            {eyebrow}
-          </p>
-
-          <h2 className="mt-2 text-2xl font-bold">
-            {title}
-          </h2>
-
-        </div>
-
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl font-bold ${buttonClass}`}
-        >
-          {open
-            ? "−"
-            : "+"}
-        </span>
-
-      </button>
-
-      {open && (
-
-        <div className="border-t border-white/10 p-5 md:p-6">
-          {children}
-        </div>
-
-      )}
-
-    </section>
-
-  );
-}
 
 /* =========================================================
    REGION SECTION
@@ -2405,71 +1666,6 @@ function DrillCard({
   );
 }
 
-/* =========================================================
-   OVERVIEW STAT
-   ========================================================= */
-
-function OverviewStat({
-  label,
-  value,
-  description,
-}: {
-  label: string;
-  value: string;
-  description: string;
-}) {
-  return (
-
-    <div className="rounded-xl border border-white/10 bg-black/10 p-4">
-
-      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">
-        {label}
-      </p>
-
-      <p className="mt-2 break-words text-xl font-bold">
-        {value}
-      </p>
-
-      <p className="mt-1 text-xs text-white/30">
-        {description}
-      </p>
-
-    </div>
-
-  );
-}
-
-/* =========================================================
-   MATERIAL BOX
-   ========================================================= */
-
-function MaterialBox({
-  material,
-  amount,
-}: {
-  material: string;
-  amount: number;
-}) {
-  return (
-
-    <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
-        {getMaterialLabel(
-          material
-        )}
-      </p>
-
-      <p className="mt-1 text-lg font-bold">
-        {formatNumber(
-          amount
-        )}
-      </p>
-
-    </div>
-
-  );
-}
 
 /* =========================================================
    REGION BADGE
