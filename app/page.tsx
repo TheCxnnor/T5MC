@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import DashboardRecommendations from "../components/DashboardRecommendations";
 
 type Source =
   | "helmets"
@@ -418,6 +419,7 @@ export default function HomePage() {
             </div>
           )}
         </section>
+        <DashboardRecommendations planets={planets} />
       </div>
     </main>
   );

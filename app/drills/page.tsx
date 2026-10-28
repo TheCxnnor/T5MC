@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { drills } from "../../data/drills";
 
@@ -23,10 +18,7 @@ import { getMaterialSummary } from "../../lib/materialTotals";
    TYPES
    ========================================================= */
 
-type Region =
-  | "moon"
-  | "mars"
-  | "sun";
+type Region = "moon" | "mars" | "sun";
 
 type Requirement = {
   material: string;
@@ -43,10 +35,6 @@ type Drill = {
 
 type OpenSections = {
   overview: boolean;
-  target: boolean;
-
-  targetPath: boolean;
-  targetMaterials: boolean;
 
   moon: boolean;
   mars: boolean;
@@ -57,7 +45,6 @@ type OpenSections = {
 
 type SavedState = {
   obtained: string[];
-  targetDrillId: string;
   openSections: OpenSections;
 };
 
@@ -65,15 +52,13 @@ type SavedState = {
    TYPED DRILL DATA
    ========================================================= */
 
-const typedDrills =
-  drills as Drill[];
+const typedDrills = drills as Drill[];
 
 /* =========================================================
    STORAGE
    ========================================================= */
 
-const STORAGE_KEY =
-  "t5-mission-control-drills";
+const STORAGE_KEY = "t5-mission-control-drills";
 
 /* =========================================================
    DEFAULTS
@@ -81,11 +66,6 @@ const STORAGE_KEY =
 
 const DEFAULT_OPEN_SECTIONS: OpenSections = {
   overview: true,
-
-  target: true,
-
-  targetPath: false,
-  targetMaterials: false,
 
   moon: true,
   mars: true,
@@ -97,24 +77,14 @@ const DEFAULT_OPEN_SECTIONS: OpenSections = {
 const DEFAULT_STATE: SavedState = {
   obtained: [],
 
-  targetDrillId:
-    typedDrills[
-      typedDrills.length - 1
-    ]?.id ?? "",
-
-  openSections:
-    DEFAULT_OPEN_SECTIONS,
+  openSections: DEFAULT_OPEN_SECTIONS,
 };
 
 /* =========================================================
    REGION ORDER
    ========================================================= */
 
-const REGION_ORDER: Region[] = [
-  "moon",
-  "mars",
-  "sun",
-];
+const REGION_ORDER: Region[] = ["moon", "mars", "sun"];
 
 /* =========================================================
    HELPERS
@@ -124,53 +94,28 @@ function getMaterialLabel(material: string) {
   return getSharedMaterialLabel(material, { coinsQd: "Qd Coins" });
 }
 
-function getRegionLabel(
-  region: Region
-) {
-  if (
-    region ===
-    "moon"
-  ) {
+function getRegionLabel(region: Region) {
+  if (region === "moon") {
     return "Moon";
   }
 
-  if (
-    region ===
-    "mars"
-  ) {
+  if (region === "mars") {
     return "Mars";
   }
 
   return "Sun";
 }
 
-function getDrillIndex(
-  drillId: string
-) {
-  return typedDrills.findIndex(
-    (
-      drill
-    ) =>
-      drill.id ===
-      drillId
-  );
+function getDrillIndex(drillId: string) {
+  return typedDrills.findIndex((drill) => drill.id === drillId);
 }
 
-function getProgressPercentage(
-  completedCount: number
-) {
-  if (
-    typedDrills.length ===
-    0
-  ) {
+function getProgressPercentage(completedCount: number) {
+  if (typedDrills.length === 0) {
     return 0;
   }
 
-  return (
-    completedCount /
-    typedDrills.length
-  ) *
-    100;
+  return (completedCount / typedDrills.length) * 100;
 }
 
 /* =========================================================
@@ -178,19 +123,9 @@ function getProgressPercentage(
    ========================================================= */
 
 export default function DrillsPage() {
-  const [
-    state,
-    setState,
-  ] =
-    useState<SavedState>(
-      DEFAULT_STATE
-    );
+  const [state, setState] = useState<SavedState>(DEFAULT_STATE);
 
-  const [
-    loaded,
-    setLoaded,
-  ] =
-    useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   /* =======================================================
      LOAD
@@ -198,18 +133,10 @@ export default function DrillsPage() {
 
   useEffect(() => {
     try {
-      const saved =
-        window.localStorage.getItem(
-          STORAGE_KEY
-        );
+      const saved = window.localStorage.getItem(STORAGE_KEY);
 
-      if (
-        saved
-      ) {
-        const parsed =
-          JSON.parse(
-            saved
-          ) as Partial<SavedState>;
+      if (saved) {
+        const parsed = JSON.parse(saved) as Partial<SavedState>;
 
         setState({
           ...DEFAULT_STATE,
@@ -219,24 +146,14 @@ export default function DrillsPage() {
           openSections: {
             ...DEFAULT_OPEN_SECTIONS,
 
-            ...(
-              parsed.openSections ??
-              {}
-            ),
+            ...(parsed.openSections ?? {}),
           },
         });
       }
-    } catch (
-      error
-    ) {
-      console.error(
-        "Could not load drill progression:",
-        error
-      );
+    } catch (error) {
+      console.error("Could not load drill progression:", error);
     } finally {
-      setLoaded(
-        true
-      );
+      setLoaded(true);
     }
   }, []);
 
@@ -245,9 +162,7 @@ export default function DrillsPage() {
      ======================================================= */
 
   useEffect(() => {
-    if (
-      !loaded
-    ) {
+    if (!loaded) {
       return;
     }
 
@@ -255,324 +170,125 @@ export default function DrillsPage() {
       window.localStorage.setItem(
         STORAGE_KEY,
 
-        JSON.stringify(
-          state
-        )
+        JSON.stringify(state),
       );
-    } catch (
-      error
-    ) {
-      console.error(
-        "Could not save drill progression:",
-        error
-      );
+    } catch (error) {
+      console.error("Could not save drill progression:", error);
     }
-  }, [
-    state,
-    loaded,
-  ]);
+  }, [state, loaded]);
 
   /* =======================================================
      OBTAINED
      ======================================================= */
 
-  const obtainedSet =
-    useMemo(
-      () =>
-        new Set(
-          state.obtained
-        ),
-      [
-        state.obtained,
-      ]
-    );
+  const obtainedSet = useMemo(() => new Set(state.obtained), [state.obtained]);
 
   /* =======================================================
      CURRENT DRILL
      ======================================================= */
 
-  const highestObtainedIndex =
-    useMemo(() => {
-      let highest =
-        -1;
+  const highestObtainedIndex = useMemo(() => {
+    let highest = -1;
 
-      typedDrills.forEach(
-        (
-          drill,
-          index
-        ) => {
-          if (
-            obtainedSet.has(
-              drill.id
-            )
-          ) {
-            highest =
-              Math.max(
-                highest,
-                index
-              );
-          }
-        }
-      );
+    typedDrills.forEach((drill, index) => {
+      if (obtainedSet.has(drill.id)) {
+        highest = Math.max(highest, index);
+      }
+    });
 
-      return highest;
-    }, [
-      obtainedSet,
-    ]);
+    return highest;
+  }, [obtainedSet]);
 
   const currentDrill =
-    highestObtainedIndex >=
-    0
-      ? typedDrills[
-          highestObtainedIndex
-        ]
-      : null;
+    highestObtainedIndex >= 0 ? typedDrills[highestObtainedIndex] : null;
 
   const nextDrill =
-    highestObtainedIndex +
-      1 <
-    typedDrills.length
-      ? typedDrills[
-          highestObtainedIndex +
-            1
-        ]
+    highestObtainedIndex + 1 < typedDrills.length
+      ? typedDrills[highestObtainedIndex + 1]
       : null;
 
-  const completedCount =
-    highestObtainedIndex +
-    1;
+  const completedCount = highestObtainedIndex + 1;
 
-  const progressPercentage =
-    getProgressPercentage(
-      completedCount
-    );
-
-  /* =======================================================
-     TARGET
-     ======================================================= */
-
-  const targetDrill =
-    useMemo(
-      () =>
-        typedDrills.find(
-          (
-            drill
-          ) =>
-            drill.id ===
-            state.targetDrillId
-        ) ??
-        typedDrills[
-          typedDrills.length -
-            1
-        ],
-      [
-        state.targetDrillId,
-      ]
-    );
-
-  const targetIndex =
-    targetDrill
-      ? getDrillIndex(
-          targetDrill.id
-        )
-      : -1;
-
-  const drillsToTarget =
-    useMemo(() => {
-      if (
-        targetIndex <
-        0
-      ) {
-        return [];
-      }
-
-      if (
-        targetIndex <=
-        highestObtainedIndex
-      ) {
-        return [];
-      }
-
-      return typedDrills.slice(
-        highestObtainedIndex +
-          1,
-        targetIndex +
-          1
-      );
-    }, [
-      highestObtainedIndex,
-      targetIndex,
-    ]);
-
-  /* =======================================================
-     DIRECT TARGET TOTALS
-     ======================================================= */
-
-  const targetMaterialTotals = useMemo(
-    () => getMaterialSummary(drillsToTarget.flatMap(drill => drill.requirements)),
-    [drillsToTarget]
-  );
+  const progressPercentage = getProgressPercentage(completedCount);
 
   /* =======================================================
      REGION GROUPS
      ======================================================= */
 
-  const groupedDrills =
-    useMemo(() => {
-      return {
-        moon:
-          typedDrills.filter(
-            (
-              drill
-            ) =>
-              drill.region ===
-              "moon"
-          ),
+  const groupedDrills = useMemo(() => {
+    return {
+      moon: typedDrills.filter((drill) => drill.region === "moon"),
 
-        mars:
-          typedDrills.filter(
-            (
-              drill
-            ) =>
-              drill.region ===
-              "mars"
-          ),
+      mars: typedDrills.filter((drill) => drill.region === "mars"),
 
-        sun:
-          typedDrills.filter(
-            (
-              drill
-            ) =>
-              drill.region ===
-              "sun"
-          ),
-      };
-    }, []);
+      sun: typedDrills.filter((drill) => drill.region === "sun"),
+    };
+  }, []);
 
   /* =======================================================
      OVERALL REMAINING MATERIAL TOTALS
      ======================================================= */
 
-  const remainingDrills =
-    useMemo(() => {
-      return typedDrills.slice(
-        highestObtainedIndex +
-          1
-      );
-    }, [
-      highestObtainedIndex,
-    ]);
+  const remainingDrills = useMemo(() => {
+    return typedDrills.slice(highestObtainedIndex + 1);
+  }, [highestObtainedIndex]);
 
   const remainingMaterialTotals = useMemo(
-    () => getMaterialSummary(remainingDrills.flatMap(drill => drill.requirements)),
-    [remainingDrills]
+    () =>
+      getMaterialSummary(
+        remainingDrills.flatMap((drill) => drill.requirements),
+      ),
+    [remainingDrills],
   );
 
   /* =======================================================
      TOGGLE DRILL
      ======================================================= */
 
-  function toggleDrill(
-    drillId: string
-  ) {
-    const index =
-      getDrillIndex(
-        drillId
-      );
+  function toggleDrill(drillId: string) {
+    const index = getDrillIndex(drillId);
 
-    if (
-      index <
-      0
-    ) {
+    if (index < 0) {
       return;
     }
 
-    const alreadyObtained =
-      obtainedSet.has(
-        drillId
-      );
+    const alreadyObtained = obtainedSet.has(drillId);
 
-    if (
-      alreadyObtained
-    ) {
-      const remaining =
-        typedDrills
-          .slice(
-            0,
-            index
-          )
-          .map(
-            (
-              drill
-            ) =>
-              drill.id
-          );
+    if (alreadyObtained) {
+      const remaining = typedDrills.slice(0, index).map((drill) => drill.id);
 
-      setState(
-        (
-          current
-        ) => ({
-          ...current,
-
-          obtained:
-            remaining,
-        })
-      );
-
-      return;
-    }
-
-    const completed =
-      typedDrills
-        .slice(
-          0,
-          index +
-            1
-        )
-        .map(
-          (
-            drill
-          ) =>
-            drill.id
-        );
-
-    setState(
-      (
-        current
-      ) => ({
+      setState((current) => ({
         ...current,
 
-        obtained:
-          completed,
-      })
-    );
+        obtained: remaining,
+      }));
+
+      return;
+    }
+
+    const completed = typedDrills.slice(0, index + 1).map((drill) => drill.id);
+
+    setState((current) => ({
+      ...current,
+
+      obtained: completed,
+    }));
   }
 
   /* =======================================================
      TOGGLE SECTION
      ======================================================= */
 
-  function toggleSection(
-    section:
-      keyof OpenSections
-  ) {
-    setState(
-      (
-        current
-      ) => ({
-        ...current,
+  function toggleSection(section: keyof OpenSections) {
+    setState((current) => ({
+      ...current,
 
-        openSections: {
-          ...current.openSections,
+      openSections: {
+        ...current.openSections,
 
-          [section]:
-            !current
-              .openSections[
-                section
-              ],
-        },
-      })
-    );
+        [section]: !current.openSections[section],
+      },
+    }));
   }
 
   /* =======================================================
@@ -580,40 +296,31 @@ export default function DrillsPage() {
      ======================================================= */
 
   function resetProgress() {
-    setState(
-      (
-        current
-      ) => ({
-        ...current,
+    setState((current) => ({
+      ...current,
 
-        obtained: [],
-      })
-    );
+      obtained: [],
+    }));
   }
 
   return (
     <main className="min-h-screen bg-[#151b24] px-4 py-8 text-white md:px-6 lg:px-8">
-
       <div className="mx-auto max-w-7xl">
-
         {/* =================================================
             HEADER
             ================================================= */}
 
         <div className="mb-8">
-
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#9bbcff]">
             Progression
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold md:text-4xl">
-            Drills
-          </h1>
+          <h1 className="mt-2 text-3xl font-bold md:text-4xl">Drills</h1>
 
           <p className="mt-2 max-w-3xl text-sm text-[#9aa4af] md:text-base">
-            Track your Moon, Mars and Sun drill progression and calculate the materials required for future upgrades.
+            Track your Moon, Mars and Sun drill progression and calculate the
+            materials required for future upgrades.
           </p>
-
         </div>
 
         {/* =================================================
@@ -624,34 +331,20 @@ export default function DrillsPage() {
           eyebrow="Progress"
           title="Drill Progression"
 
-          open={
-            state
-              .openSections
-              .overview
-          }
+          open={state.openSections.overview}
 
-          onToggle={() =>
-            toggleSection(
-              "overview"
-            )
-          }
+          onToggle={() => toggleSection("overview")}
 
           borderClass="border-[#536272]"
           backgroundClass="bg-[#1e252d]"
           accentClass="text-[#a8bad0]"
           buttonClass="bg-[#293440] text-[#b9c9dc]"
         >
-
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-
             <OverviewStat
               label="Current Drill"
 
-              value={
-                currentDrill
-                  ?.name ??
-                "Icehowl Drill"
-              }
+              value={currentDrill?.name ?? "Icehowl Drill"}
 
               description={
                 currentDrill
@@ -663,17 +356,11 @@ export default function DrillsPage() {
             <OverviewStat
               label="Next Drill"
 
-              value={
-                nextDrill
-                  ?.name ??
-                "Maxed"
-              }
+              value={nextDrill?.name ?? "Maxed"}
 
               description={
                 nextDrill
-                  ? `${getRegionLabel(
-                      nextDrill.region
-                    )} progression`
+                  ? `${getRegionLabel(nextDrill.region)} progression`
                   : "Fusion Drill obtained"
               }
             />
@@ -689,458 +376,126 @@ export default function DrillsPage() {
             <OverviewStat
               label="Progress"
 
-              value={`${formatNumber(
-                Math.round(
-                  progressPercentage
-                )
-              )}%`}
+              value={`${formatNumber(Math.round(progressPercentage))}%`}
 
               description="Overall drill progression"
             />
-
           </div>
 
           <div className="mt-5">
-
             <div className="mb-2 flex items-center justify-between gap-4 text-xs text-white/40">
+              <span>Icehowl Drill</span>
 
-              <span>
-                Icehowl Drill
-              </span>
-
-              <span>
-                Fusion Drill
-              </span>
-
+              <span>Fusion Drill</span>
             </div>
 
             <div className="h-3 overflow-hidden rounded-full bg-black/20">
-
               <div
                 className="h-full rounded-full bg-[#7c96b2] transition-all duration-300"
 
                 style={{
-                  width:
-                    `${progressPercentage}%`,
+                  width: `${progressPercentage}%`,
                 }}
               />
-
             </div>
-
           </div>
 
           {nextDrill ? (
-
             <div className="mt-6 rounded-2xl border border-white/10 bg-black/10 p-5">
-
               <div className="flex flex-wrap items-start justify-between gap-3">
-
                 <div>
-
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
                     Next Upgrade
                   </p>
 
-                  <h3 className="mt-2 text-2xl font-bold">
-                    {nextDrill.name}
-                  </h3>
+                  <h3 className="mt-2 text-2xl font-bold">{nextDrill.name}</h3>
 
                   <p className="mt-1 text-sm text-white/40">
-                    Requires{" "}
-                    {nextDrill.prerequisite}
+                    Requires {nextDrill.prerequisite}
                   </p>
-
                 </div>
 
-                <RegionBadge
-                  region={
-                    nextDrill.region
-                  }
-                />
-
+                <RegionBadge region={nextDrill.region} />
               </div>
 
               <div className="mt-4 space-y-3">
+                {nextDrill.requirements.map((requirement) => (
+                  <RequirementDisplay
+                    key={requirement.material}
 
-                {nextDrill.requirements.map(
-                  (
-                    requirement
-                  ) => (
-
-                    <RequirementDisplay
-                      key={
-                        requirement.material
-                      }
-
-                      requirement={
-                        requirement
-                      }
-                    />
-
-                  )
-                )}
-
+                    requirement={requirement}
+                  />
+                ))}
               </div>
-
             </div>
-
           ) : (
-
             <div className="mt-6 rounded-2xl border border-[#d8c36a]/30 bg-[#342e1d] p-5">
-
-              <p className="font-bold text-[#ead98c]">
-                All drills completed
-              </p>
+              <p className="font-bold text-[#ead98c]">All drills completed</p>
 
               <p className="mt-1 text-sm text-white/45">
                 You have reached Fusion Drill.
               </p>
-
             </div>
-
           )}
 
           <div className="mt-5 flex justify-end">
-
             <button
               type="button"
 
-              onClick={
-                resetProgress
-              }
+              onClick={resetProgress}
 
               className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 text-xs font-semibold text-white/55 transition hover:border-white/20 hover:text-white"
             >
               Reset Progress
             </button>
-
           </div>
-
-        </MainSection>
-
-        {/* =================================================
-            TARGET CALCULATOR
-            ================================================= */}
-
-        <MainSection
-          eyebrow="Upgrade Planner"
-          title="Target Drill Calculator"
-
-          open={
-            state
-              .openSections
-              .target
-          }
-
-          onToggle={() =>
-            toggleSection(
-              "target"
-            )
-          }
-
-          borderClass="border-[#6e6a4a]"
-          backgroundClass="bg-[#29271d]"
-          accentClass="text-[#d8cc87]"
-          buttonClass="bg-[#3a3624] text-[#dfd18b]"
-        >
-
-          <div className="grid gap-4 md:grid-cols-2">
-
-            <label className="block">
-
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50">
-                Target Drill
-              </span>
-
-              <select
-                value={
-                  state.targetDrillId
-                }
-
-                onChange={(
-                  event
-                ) =>
-                  setState(
-                    (
-                      current
-                    ) => ({
-                      ...current,
-
-                      targetDrillId:
-                        event.target.value,
-                    })
-                  )
-                }
-
-                className="mt-2 w-full rounded-xl border border-[#505b67] bg-[#171d25] px-3 py-3 text-sm font-semibold text-white outline-none transition focus:border-[#d8cc87]"
-              >
-
-                {typedDrills.map(
-                  (
-                    drill
-                  ) => (
-
-                    <option
-                      key={
-                        drill.id
-                      }
-
-                      value={
-                        drill.id
-                      }
-                    >
-                      {drill.name}
-                    </option>
-
-                  )
-                )}
-
-              </select>
-
-            </label>
-
-            <div className="rounded-xl border border-white/10 bg-black/10 p-4">
-
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
-                Upgrades Remaining
-              </p>
-
-              <p className="mt-2 text-2xl font-bold">
-                {drillsToTarget.length}
-              </p>
-
-              <p className="mt-1 text-xs text-white/35">
-
-                {currentDrill
-                  ? `From ${currentDrill.name}`
-                  : "Starting from Icehowl Drill"}
-
-              </p>
-
-            </div>
-
-          </div>
-
-          {drillsToTarget.length >
-          0 ? (
-
-            <div className="mt-5 space-y-4">
-
-              {/* ===========================================
-                  UPGRADE PATH
-                  =========================================== */}
-
-              <PlannerSection
-                title="Upgrade Path"
-
-                subtitle={`${drillsToTarget.length} upgrade${
-                  drillsToTarget.length ===
-                  1
-                    ? ""
-                    : "s"
-                } remaining`}
-
-                open={
-                  state
-                    .openSections
-                    .targetPath
-                }
-
-                onToggle={() =>
-                  toggleSection(
-                    "targetPath"
-                  )
-                }
-              >
-
-                <div className="flex flex-wrap gap-2">
-
-                  {drillsToTarget.map(
-                    (
-                      drill,
-                      index
-                    ) => (
-
-                      <div
-                        key={
-                          drill.id
-                        }
-
-                        className="flex items-center gap-2"
-                      >
-
-                        <span className="rounded-lg border border-white/10 bg-black/10 px-3 py-2 text-xs font-semibold">
-                          {drill.name}
-                        </span>
-
-                        {index <
-                          drillsToTarget.length -
-                            1 && (
-
-                          <span className="text-white/25">
-                            →
-                          </span>
-
-                        )}
-
-                      </div>
-
-                    )
-                  )}
-
-                </div>
-
-              </PlannerSection>
-
-              {/* ===========================================
-                  MATERIALS REQUIRED
-                  =========================================== */}
-
-              <PlannerSection
-                title="Materials Required"
-
-                subtitle="Raw materials, currencies and crafting totals"
-
-                open={
-                  state
-                    .openSections
-                    .targetMaterials
-                }
-
-                onToggle={() =>
-                  toggleSection(
-                    "targetMaterials"
-                  )
-                }
-              >
-
-                <MaterialTotals
-                  summary={targetMaterialTotals}
-                  title="Raw Materials"
-                  description="Cumulative requirements from your next drill through your selected target."
-                />
-
-              </PlannerSection>
-
-            </div>
-
-          ) : (
-
-            <div className="mt-5 rounded-xl border border-white/10 bg-black/10 p-5">
-
-              <p className="font-semibold">
-                Target already reached
-              </p>
-
-              <p className="mt-1 text-sm text-white/40">
-                Choose a drill later in the progression to calculate remaining materials.
-              </p>
-
-            </div>
-
-          )}
-
         </MainSection>
 
         {/* =================================================
             REGIONS
             ================================================= */}
 
-        {REGION_ORDER.map(
-          (
-            region
-          ) => (
+        {REGION_ORDER.map((region) => (
+          <RegionSection
+            key={region}
 
-            <RegionSection
-              key={
-                region
-              }
+            region={region}
 
-              region={
-                region
-              }
+            open={state.openSections[region]}
 
-              open={
-                state
-                  .openSections[
-                    region
-                  ]
-              }
-
-              onToggle={() =>
-                toggleSection(
-                  region
-                )
-              }
+            onToggle={() => toggleSection(region)}
+          >
+            <div
+              className={`grid gap-4 ${
+                region === "moon"
+                  ? "lg:grid-cols-2 xl:grid-cols-4"
+                  : "lg:grid-cols-2 xl:grid-cols-5"
+              }`}
             >
+              {groupedDrills[region].map((drill) => {
+                const obtained = obtainedSet.has(drill.id);
 
-              <div
-                className={`grid gap-4 ${
-                  region ===
-                  "moon"
-                    ? "lg:grid-cols-2 xl:grid-cols-4"
-                    : "lg:grid-cols-2 xl:grid-cols-5"
-                }`}
-              >
+                const drillIndex = getDrillIndex(drill.id);
 
-                {groupedDrills[
-                  region
-                ].map(
-                  (
-                    drill
-                  ) => {
+                const isNext = drillIndex === highestObtainedIndex + 1;
 
-                    const obtained =
-                      obtainedSet.has(
-                        drill.id
-                      );
+                return (
+                  <DrillCard
+                    key={drill.id}
 
-                    const drillIndex =
-                      getDrillIndex(
-                        drill.id
-                      );
+                    drill={drill}
 
-                    const isNext =
-                      drillIndex ===
-                      highestObtainedIndex +
-                        1;
+                    obtained={obtained}
 
-                    return (
+                    isNext={isNext}
 
-                      <DrillCard
-                        key={
-                          drill.id
-                        }
-
-                        drill={
-                          drill
-                        }
-
-                        obtained={
-                          obtained
-                        }
-
-                        isNext={
-                          isNext
-                        }
-
-                        onToggle={() =>
-                          toggleDrill(
-                            drill.id
-                          )
-                        }
-                      />
-
-                    );
-                  }
-                )}
-
-              </div>
-
-            </RegionSection>
-
-          )
-        )}
+                    onToggle={() => toggleDrill(drill.id)}
+                  />
+                );
+              })}
+            </div>
+          </RegionSection>
+        ))}
 
         {/* =================================================
             MATERIAL TOTALS
@@ -1150,30 +505,20 @@ export default function DrillsPage() {
           eyebrow="Materials"
           title="Material Totals"
 
-          open={
-            state
-              .openSections
-              .totals
-          }
+          open={state.openSections.totals}
 
-          onToggle={() =>
-            toggleSection(
-              "totals"
-            )
-          }
+          onToggle={() => toggleSection("totals")}
 
           borderClass="border-[#56734f]"
           backgroundClass="bg-[#202a20]"
           accentClass="text-[#a9cf9f]"
           buttonClass="bg-[#30432d] text-[#b9dfaf]"
         >
-
           <MaterialTotals
             summary={remainingMaterialTotals}
             description="Cumulative requirements from your next drill through Fusion Drill."
             emptyMessage="All drills completed. You have no remaining drill materials."
           />
-
         </MainSection>
 
         {/* =================================================
@@ -1181,21 +526,14 @@ export default function DrillsPage() {
             ================================================= */}
 
         <div className="mt-6 rounded-xl border border-white/10 bg-[#1d242d] p-4 text-xs leading-5 text-white/40">
-
-          Drill progression is linear. Marking a later drill as obtained automatically marks all previous drills complete. Removing a drill also removes every drill after it.
-
-          {" "}
-
-          Icehowl Drill is treated as the starting prerequisite and is not included in the tracked drill list.
-
-          {" "}
-
-          Plasma compacted materials use a 1:1 conversion from their matching normal compacted item.
-
+          Drill progression is linear. Marking a later drill as obtained
+          automatically marks all previous drills complete. Removing a drill
+          also removes every drill after it. Icehowl Drill is treated as the
+          starting prerequisite and is not included in the tracked drill list.{" "}
+          Plasma compacted materials use a 1:1 conversion from their matching
+          normal compacted item.
         </div>
-
       </div>
-
     </main>
   );
 }
@@ -1204,267 +542,109 @@ export default function DrillsPage() {
    REQUIREMENT DISPLAY
    ========================================================= */
 
-function RequirementDisplay({
-  requirement,
-}: {
-  requirement: Requirement;
-}) {
-  const [
-    open,
-    setOpen,
-  ] =
-    useState(false);
+function RequirementDisplay({ requirement }: { requirement: Requirement }) {
+  const [open, setOpen] = useState(false);
 
-  const expanded =
-    getExpandedRequirement(
-      requirement
-    );
+  const expanded = getExpandedRequirement(requirement);
 
-  if (
-    !expanded
-  ) {
+  if (!expanded) {
     return (
-
       <div className="flex items-center justify-between gap-4 rounded-lg bg-black/10 px-3 py-2 text-sm">
-
         <span className="min-w-0 break-words text-white/60">
-          {getMaterialLabel(
-            requirement.material
-          )}
+          {getMaterialLabel(requirement.material)}
         </span>
 
         <span className="shrink-0 font-bold">
-          {formatNumber(
-            requirement.amount
-          )}
+          {formatNumber(requirement.amount)}
         </span>
-
       </div>
-
     );
   }
 
   return (
-
     <div className="overflow-hidden rounded-xl border border-[#a88e4d]/25 bg-black/10">
-
       <button
         type="button"
 
-        onClick={() =>
-          setOpen(
-            (
-              current
-            ) =>
-              !current
-          )
-        }
+        onClick={() => setOpen((current) => !current)}
 
         className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left transition hover:bg-white/[0.025]"
       >
-
         <div className="min-w-0">
-
           <p className="break-words text-sm font-semibold text-[#e0ca84]">
-            {getMaterialLabel(
-              requirement.material
-            )}
+            {getMaterialLabel(requirement.material)}
           </p>
 
           {expanded.isPlasma && (
-
             <p className="mt-1 text-[10px] text-white/35">
               1:1 plasma conversion
             </p>
-
           )}
-
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
-
           <span className="text-sm font-bold">
-            {formatNumber(
-              requirement.amount
-            )}
+            {formatNumber(requirement.amount)}
           </span>
 
           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#413821] text-sm font-bold text-[#e4cc7e]">
-            {open
-              ? "−"
-              : "+"}
+            {open ? "−" : "+"}
           </span>
-
         </div>
-
       </button>
 
       {open && (
-
         <div className="border-t border-white/5 bg-black/10 px-3 py-3">
-
           {expanded.isPlasma && (
-
             <div className="mb-3 rounded-lg border border-[#9b8248]/20 bg-[#332d1e] px-3 py-2">
-
               <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30">
                 Underlying Compacted Item
               </p>
 
               <div className="mt-1 flex items-center justify-between gap-3">
-
                 <span className="text-xs font-semibold text-[#d8c27c]">
                   {expanded.compactedItem.name}
                 </span>
 
                 <span className="text-xs font-bold text-[#ead690]">
-                  ×
-                  {formatNumber(
-                    expanded.amount
-                  )}
+                  ×{formatNumber(expanded.amount)}
                 </span>
-
               </div>
-
             </div>
-
           )}
 
           <div className="space-y-1.5">
+            {expanded.ingredients.map((ingredient) => (
+              <div
+                key={ingredient.material}
 
-            {expanded.ingredients.map(
-              (
-                ingredient
-              ) => (
+                className="flex items-center justify-between gap-3 pl-1 text-xs"
+              >
+                <span className="min-w-0 break-words text-white/45">
+                  ↳ {getMaterialLabel(ingredient.material)}
+                </span>
 
-                <div
-                  key={
-                    ingredient.material
-                  }
-
-                  className="flex items-center justify-between gap-3 pl-1 text-xs"
-                >
-
-                  <span className="min-w-0 break-words text-white/45">
-                    ↳{" "}
-                    {getMaterialLabel(
-                      ingredient.material
-                    )}
-                  </span>
-
-                  <span className="shrink-0 font-semibold text-white/70">
-                    {formatNumber(
-                      ingredient.amount
-                    )}
-                  </span>
-
-                </div>
-
-              )
-            )}
-
+                <span className="shrink-0 font-semibold text-white/70">
+                  {formatNumber(ingredient.amount)}
+                </span>
+              </div>
+            ))}
           </div>
 
           <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3">
-
             <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">
               Compaction Time
             </span>
 
             <span className="text-xs font-bold text-[#e4cc7e]">
-              {formatHours(
-                expanded.timeHours
-              )}
+              {formatHours(expanded.timeHours)}
             </span>
-
           </div>
-
         </div>
-
       )}
-
     </div>
-
   );
 }
-
-/* =========================================================
-   PLANNER SUBSECTION
-   ========================================================= */
-
-function PlannerSection({
-  title,
-  subtitle,
-  open,
-  onToggle,
-  rightContent,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  open: boolean;
-  onToggle: () => void;
-  rightContent?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-
-    <section className="overflow-hidden rounded-2xl border border-white/10 bg-black/10">
-
-      <button
-        type="button"
-
-        onClick={
-          onToggle
-        }
-
-        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-white/[0.02]"
-      >
-
-        <div>
-
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d8cc87]">
-            {title}
-          </p>
-
-          {subtitle && (
-
-            <p className="mt-1 text-xs text-white/35">
-              {subtitle}
-            </p>
-
-          )}
-
-        </div>
-
-        <div className="flex shrink-0 items-center gap-3">
-
-          {rightContent}
-
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#3a3624] text-base font-bold text-[#dfd18b]">
-            {open
-              ? "−"
-              : "+"}
-          </span>
-
-        </div>
-
-      </button>
-
-      {open && (
-
-        <div className="border-t border-white/10 p-4">
-          {children}
-        </div>
-
-      )}
-
-    </section>
-
-  );
-}
-
-
 
 /* =========================================================
    REGION SECTION
@@ -1481,65 +661,42 @@ function RegionSection({
   onToggle: () => void;
   children: ReactNode;
 }) {
-  const theme =
-    getRegionTheme(
-      region
-    );
+  const theme = getRegionTheme(region);
 
   return (
-
     <section
       className={`mb-6 overflow-hidden rounded-2xl border ${theme.border} ${theme.background}`}
     >
-
       <button
         type="button"
 
-        onClick={
-          onToggle
-        }
+        onClick={onToggle}
 
         className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left md:px-6"
       >
-
         <div>
-
           <span
             className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${theme.badge}`}
           >
-            {getRegionLabel(
-              region
-            )}
+            {getRegionLabel(region)}
           </span>
 
           <h2 className="mt-3 text-2xl font-bold">
-            {getRegionLabel(
-              region
-            )} Drills
+            {getRegionLabel(region)} Drills
           </h2>
-
         </div>
 
         <span
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl font-bold ${theme.button}`}
         >
-          {open
-            ? "−"
-            : "+"}
+          {open ? "−" : "+"}
         </span>
-
       </button>
 
       {open && (
-
-        <div className="border-t border-white/10 p-4 md:p-5">
-          {children}
-        </div>
-
+        <div className="border-t border-white/10 p-4 md:p-5">{children}</div>
       )}
-
     </section>
-
   );
 }
 
@@ -1558,13 +715,9 @@ function DrillCard({
   isNext: boolean;
   onToggle: () => void;
 }) {
-  const theme =
-    getRegionTheme(
-      drill.region
-    );
+  const theme = getRegionTheme(drill.region);
 
   return (
-
     <article
       className={`flex min-w-0 flex-col rounded-2xl border p-4 transition ${
         obtained
@@ -1574,35 +727,23 @@ function DrillCard({
             : "border-white/10 bg-black/10"
       }`}
     >
-
       <div className="flex items-start justify-between gap-3">
-
         <div className="min-w-0">
-
           <div className="flex flex-wrap items-center gap-2">
+            <h3 className="break-words text-lg font-bold">{drill.name}</h3>
 
-            <h3 className="break-words text-lg font-bold">
-              {drill.name}
-            </h3>
-
-            {isNext &&
-              !obtained && (
-
+            {isNext && !obtained && (
               <span
                 className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] ${theme.badge}`}
               >
                 Next
               </span>
-
             )}
-
           </div>
 
           <p className="mt-1 text-xs text-white/35">
-            Requires{" "}
-            {drill.prerequisite}
+            Requires {drill.prerequisite}
           </p>
-
         </div>
 
         <button
@@ -1614,9 +755,7 @@ function DrillCard({
               : `Mark ${drill.name} as obtained`
           }
 
-          onClick={
-            onToggle
-          }
+          onClick={onToggle}
 
           className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-sm font-bold transition ${
             obtained
@@ -1626,71 +765,38 @@ function DrillCard({
         >
           ✓
         </button>
-
       </div>
 
       <div className="mt-4 space-y-3">
+        {drill.requirements.map((requirement) => (
+          <RequirementDisplay
+            key={requirement.material}
 
-        {drill.requirements.map(
-          (
-            requirement
-          ) => (
-
-            <RequirementDisplay
-              key={
-                requirement.material
-              }
-
-              requirement={
-                requirement
-              }
-            />
-
-          )
-        )}
-
+            requirement={requirement}
+          />
+        ))}
       </div>
 
       <div className="mt-auto pt-4">
-
-        <RegionBadge
-          region={
-            drill.region
-          }
-        />
-
+        <RegionBadge region={drill.region} />
       </div>
-
     </article>
-
   );
 }
-
 
 /* =========================================================
    REGION BADGE
    ========================================================= */
 
-function RegionBadge({
-  region,
-}: {
-  region: Region;
-}) {
-  const theme =
-    getRegionTheme(
-      region
-    );
+function RegionBadge({ region }: { region: Region }) {
+  const theme = getRegionTheme(region);
 
   return (
-
     <span
       className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.14em] ${theme.badge}`}
     >
-      {getRegionLabel(
-        region
-      )}
+      {getRegionLabel(region)}
     </span>
-
   );
 }
 
@@ -1698,85 +804,56 @@ function RegionBadge({
    REGION THEMES
    ========================================================= */
 
-function getRegionTheme(
-  region: Region
-) {
-  if (
-    region ===
-    "moon"
-  ) {
+function getRegionTheme(region: Region) {
+  if (region === "moon") {
     return {
-      border:
-        "border-[#405a78]",
+      border: "border-[#405a78]",
 
-      background:
-        "bg-[#202a35]",
+      background: "bg-[#202a35]",
 
-      cardBorder:
-        "border-[#557494]",
+      cardBorder: "border-[#557494]",
 
-      cardBackground:
-        "bg-[#2b3744]",
+      cardBackground: "bg-[#2b3744]",
 
-      badge:
-        "bg-[#2d4054] text-[#9bbcff]",
+      badge: "bg-[#2d4054] text-[#9bbcff]",
 
-      button:
-        "bg-[#2d4054] text-[#9bbcff]",
+      button: "bg-[#2d4054] text-[#9bbcff]",
 
-      checkbox:
-        "bg-[#6688ac] text-white",
+      checkbox: "bg-[#6688ac] text-white",
     };
   }
 
-  if (
-    region ===
-    "mars"
-  ) {
+  if (region === "mars") {
     return {
-      border:
-        "border-[#9a5a49]",
+      border: "border-[#9a5a49]",
 
-      background:
-        "bg-[#2c211f]",
+      background: "bg-[#2c211f]",
 
-      cardBorder:
-        "border-[#a86754]",
+      cardBorder: "border-[#a86754]",
 
-      cardBackground:
-        "bg-[#3a2a28]",
+      cardBackground: "bg-[#3a2a28]",
 
-      badge:
-        "bg-[#4b2d28] text-[#efaa91]",
+      badge: "bg-[#4b2d28] text-[#efaa91]",
 
-      button:
-        "bg-[#4b2d28] text-[#efaa91]",
+      button: "bg-[#4b2d28] text-[#efaa91]",
 
-      checkbox:
-        "bg-[#b66f59] text-white",
+      checkbox: "bg-[#b66f59] text-white",
     };
   }
 
   return {
-    border:
-      "border-[#8b783a]",
+    border: "border-[#8b783a]",
 
-    background:
-      "bg-[#2b281d]",
+    background: "bg-[#2b281d]",
 
-    cardBorder:
-      "border-[#9a8645]",
+    cardBorder: "border-[#9a8645]",
 
-    cardBackground:
-      "bg-[#3a3423]",
+    cardBackground: "bg-[#3a3423]",
 
-    badge:
-      "bg-[#463e25] text-[#e4cc7e]",
+    badge: "bg-[#463e25] text-[#e4cc7e]",
 
-    button:
-      "bg-[#463e25] text-[#e4cc7e]",
+    button: "bg-[#463e25] text-[#e4cc7e]",
 
-    checkbox:
-      "bg-[#a89048] text-white",
+    checkbox: "bg-[#a89048] text-white",
   };
 }
