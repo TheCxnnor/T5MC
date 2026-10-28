@@ -59,11 +59,13 @@ function MaterialPanel({
 export function MaterialTotals({
   summary,
   title = "Remaining Materials",
+  showCompactionTimeBadge = false,
   description,
   emptyMessage = "All upgrades are completed. You have no remaining materials on this page.",
 }: {
   summary: MaterialSummary;
   title?: string;
+  showCompactionTimeBadge?: boolean;
   description: string;
   emptyMessage?: ReactNode;
 }) {
@@ -82,7 +84,7 @@ export function MaterialTotals({
               </p>
             )}
           </div>
-          {summary.compaction.length > 0 && (
+          {showCompactionTimeBadge && summary.compaction.length > 0 && (
             <div className="rounded-xl border border-[#8ca87f]/20 bg-black/10 px-4 py-3 text-right">
               <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">
                 Total Compaction Time

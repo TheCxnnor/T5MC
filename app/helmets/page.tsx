@@ -1116,6 +1116,7 @@ export default function HelmetsPage() {
 
           <MaterialTotals
             summary={remainingMaterialTotals}
+            showCompactionTimeBadge={false}
             description="Cumulative requirements from your next helmet upgrade through the final helmet."
             emptyMessage="All helmets completed. You have no remaining helmet materials."
           />
