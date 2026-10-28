@@ -718,6 +718,20 @@ export default function CoresPage() {
 
         </div>
 
+        <div className="mb-6 flex justify-end">
+          <button
+            type="button"
+            disabled={!storageLoaded}
+            onClick={() => {
+              setMagmaStorage(1000);
+              setSelectedLevels({});
+            }}
+            className="rounded-lg border border-white/10 bg-black/10 px-4 py-2 text-xs font-semibold text-white/55 transition hover:border-white/20 hover:text-white disabled:opacity-50"
+          >
+            Reset Progress
+          </button>
+        </div>
+
         <MagmaSection
           open={
             openSections.magma

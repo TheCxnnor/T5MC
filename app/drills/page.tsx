@@ -400,44 +400,6 @@ export default function DrillsPage() {
             </div>
           </div>
 
-          {nextDrill ? (
-            <div className="mt-6 rounded-2xl border border-white/10 bg-black/10 p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
-                    Next Upgrade
-                  </p>
-
-                  <h3 className="mt-2 text-2xl font-bold">{nextDrill.name}</h3>
-
-                  <p className="mt-1 text-sm text-white/40">
-                    Requires {nextDrill.prerequisite}
-                  </p>
-                </div>
-
-                <RegionBadge region={nextDrill.region} />
-              </div>
-
-              <div className="mt-4 space-y-3">
-                {nextDrill.requirements.map((requirement) => (
-                  <RequirementDisplay
-                    key={requirement.material}
-
-                    requirement={requirement}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="mt-6 rounded-2xl border border-[#d8c36a]/30 bg-[#342e1d] p-5">
-              <p className="font-bold text-[#ead98c]">All drills completed</p>
-
-              <p className="mt-1 text-sm text-white/45">
-                You have reached Fusion Drill.
-              </p>
-            </div>
-          )}
-
           <div className="mt-5 flex justify-end">
             <button
               type="button"
