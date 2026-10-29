@@ -238,11 +238,6 @@ export default function AccountPanel() {
           your progress between devices.
         </p>
 
-        <p className="mt-2 max-w-2xl text-xs leading-5 text-white/40">
-          Site admins can view cloud-saved tracker progress in a read-only
-          support viewer.
-        </p>
-
         {error && (
           <p
             role="alert"
