@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import MinecraftProfiles from "./MinecraftProfiles";
+import { useMainMinecraftUsername } from "./useMainMinecraftUsername";
 import { useEffect, useState } from "react";
-import { displayUsername, validateUsername } from "../lib/username";
+import { displayUsername } from "../lib/username";
 import { useCloudAutoSave } from "./CloudAutoSave";
 import { readCloud, writeCloud } from "../lib/cloudApi";
 import type { User } from "@supabase/supabase-js";
@@ -16,8 +17,6 @@ import {
 } from "../lib/cloudProgress";
 
 type CloudInfo = { version: number; updated_at: string };
-const inputClass =
-  "mt-2 w-full rounded-xl border border-white/15 bg-[#151b24] px-3 py-3 text-white outline-none focus:border-[#a9cf9f]";
 const buttonClass =
   "rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-40";
 const primaryClass =
@@ -40,6 +39,7 @@ export default function AccountPanel() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const userId = user?.id;
+  const mainUsername = useMainMinecraftUsername(userId);
   const [cloudState, setCloudState] = useState<{
     owner?: string;
     info: CloudInfo | null;
@@ -274,69 +274,22 @@ export default function AccountPanel() {
                 Signed in as
               </p>
               <p className="mt-2 break-all font-semibold">
-                {displayUsername(user.user_metadata) ?? "Choose a username"}
+                {mainUsername ?? "Set your Main Minecraft username"}
               </p>
               <p className="mt-1 break-all text-sm text-white/50">
                 {user.email}
               </p>
-              <form
-                className="mt-5 max-w-md"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const form = new FormData(event.currentTarget);
-                  void run(async () => {
-                    const username = validateUsername(
-                      String(form.get("username") ?? ""),
-                    );
-                    await verifiedUser();
-                    const { data, error: profileError } =
-                      await getSupabase().auth.updateUser({
-                        data: { username },
-                      });
-                    if (profileError) throw profileError;
-                    setUser(data.user);
-                    setNotice("Username updated.");
-                  });
-                }}
+              <p className="mt-4 text-sm leading-6 text-white/50">
+                Your site username follows your Main Minecraft account. Edit the
+                Main username below; it updates your site username when your
+                cloud save is synced.
+              </p>
+              <Link
+                href="#minecraft-accounts"
+                className="mt-2 inline-block text-sm text-[#a9cf9f] hover:underline"
               >
-                <label
-                  className="block text-sm text-white/70"
-                  htmlFor="account-username"
-                >
-                  Username
-                </label>
-                <input
-                  key={
-                    user.id + ":" + (displayUsername(user.user_metadata) ?? "")
-                  }
-                  id="account-username"
-                  name="username"
-                  className={inputClass}
-                  defaultValue={displayUsername(user.user_metadata) ?? ""}
-                  autoComplete="nickname"
-                  minLength={3}
-                  maxLength={24}
-                  required
-                  disabled={busy}
-                  spellCheck={false}
-                  autoCapitalize="none"
-                  aria-describedby="username-help"
-                />
-                <p
-                  id="username-help"
-                  className="mt-2 text-xs leading-5 text-white/40"
-                >
-                  3–24 letters, numbers, underscores or hyphens. This is a
-                  display name; sign in with Discord.
-                </p>
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className={"mt-3 " + primaryClass}
-                >
-                  Save username
-                </button>
-              </form>
+                Edit Main Minecraft username
+              </Link>
               <div className="mt-5 rounded-xl border border-white/10 bg-black/10 p-4">
                 <p className="text-sm font-semibold">Discord login</p>
                 {user.identities?.some(

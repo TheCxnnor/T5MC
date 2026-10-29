@@ -111,7 +111,8 @@ export default function MinecraftProfiles({
         Each Minecraft username has separate progression, calculator settings
         and recommendations. Switching accounts saves the outgoing profile on
         this device and reloads the trackers. All profiles are included in your
-        site account’s cloud save.
+        site account’s cloud save. Your Main Minecraft username is also your
+        site username.
       </p>
       {error && (
         <p role="alert" className="mt-4 text-sm text-red-200">
@@ -214,7 +215,9 @@ export default function MinecraftProfiles({
                 </div>
                 <details className="mt-3">
                   <summary className="cursor-pointer text-xs text-white/45">
-                    Edit Minecraft username
+                    {profile.id === "main"
+                      ? "Edit Main username (also your site username)"
+                      : "Edit Minecraft username"}
                   </summary>
                   <form
                     className="mt-3 flex flex-wrap gap-2"
@@ -244,7 +247,9 @@ export default function MinecraftProfiles({
                       className={input}
                     />
                     <button className={button} disabled={busy} type="submit">
-                      Save name
+                      {profile.id === "main"
+                        ? "Save Main username"
+                        : "Save name"}
                     </button>
                   </form>
                 </details>
