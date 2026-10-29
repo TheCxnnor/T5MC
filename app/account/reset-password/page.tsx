@@ -1,5 +1,5 @@
-import AccountPanel from "../../../components/AccountPanel";
+import { redirect } from "next/navigation";
 
-export default function ResetPasswordPage() {
-  return <AccountPanel resetPassword />;
+export default function OldResetPasswordPage() {
+  redirect("/account");
 }

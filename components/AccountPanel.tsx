@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import MinecraftProfiles from "./MinecraftProfiles";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { displayUsername, validateUsername } from "../lib/username";
 import { useCloudAutoSave } from "./CloudAutoSave";
 import { readCloud, writeCloud } from "../lib/cloudApi";
@@ -16,7 +15,6 @@ import {
   hasRestoreBackup,
 } from "../lib/cloudProgress";
 
-type Mode = "login" | "signup" | "forgot";
 type CloudInfo = { version: number; updated_at: string };
 const inputClass =
   "mt-2 w-full rounded-xl border border-white/15 bg-[#151b24] px-3 py-3 text-white outline-none focus:border-[#a9cf9f]";
@@ -33,21 +31,11 @@ function errorMessage(error: unknown) {
       : "Something went wrong. Please try again.";
 }
 
-export default function AccountPanel({
-  resetPassword = false,
-}: {
-  resetPassword?: boolean;
-}) {
+export default function AccountPanel() {
   const sync = useCloudAutoSave();
   const configured = accountConfigured();
-  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(configured);
-  const [mode, setMode] = useState<Mode>("login");
-  const [email, setEmail] = useState("");
-  const [signupUsername, setSignupUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -91,7 +79,7 @@ export default function AccountPanel({
         setBackup(hasRestoreBackup(localStorage));
         if (new URLSearchParams(window.location.search).has("authError")) {
           setError(
-            "Sign-in could not be completed. Try again in the same browser where you started, or request a fresh password reset link if you were resetting your password.",
+            "Discord sign-in could not be completed. Please try again in the same browser where you started.",
           );
         }
         setUser(data.user);
@@ -156,70 +144,6 @@ export default function AccountPanel({
       sync.resume();
       setBusy(false);
     }
-  }
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    await run(async () => {
-      const supabase = getSupabase();
-      if (resetPassword) {
-        if (!user)
-          throw new Error(
-            "Open the password reset link from your email first.",
-          );
-        if (password !== confirmPassword)
-          throw new Error("The passwords do not match.");
-        const { error: authError } = await supabase.auth.updateUser({
-          password,
-        });
-        if (authError) throw authError;
-        setPassword("");
-        setConfirmPassword("");
-        router.replace("/account");
-      } else if (mode === "forgot") {
-        const { error: authError } = await supabase.auth.resetPasswordForEmail(
-          email.trim(),
-          {
-            redirectTo:
-              window.location.origin +
-              "/auth/callback?next=/account/reset-password",
-          },
-        );
-        if (authError) throw authError;
-        setNotice(
-          "If an account exists for that email, a password reset link will arrive shortly.",
-        );
-      } else if (mode === "signup") {
-        if (password !== confirmPassword)
-          throw new Error("The passwords do not match.");
-        const { data, error: authError } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            emailRedirectTo: window.location.origin + "/auth/callback",
-            data: { username: validateUsername(signupUsername) },
-          },
-        });
-        if (authError) throw authError;
-        setPassword("");
-        setConfirmPassword("");
-        setNotice(
-          data.session
-            ? "Your account is ready."
-            : "Check your email to confirm your account, then return here to sign in.",
-        );
-      } else {
-        const { error: authError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-        if (authError) throw authError;
-        setPassword("");
-        setNotice(
-          "Signed in. Choose whether to save this browser's progress or load your cloud save.",
-        );
-      }
-    });
   }
 
   async function verifiedUser() {
@@ -302,17 +226,11 @@ export default function AccountPanel({
 
   return (
     <main className="min-h-screen px-4 py-8 text-white md:px-6 lg:px-8">
-      <div
-        className={
-          user && !resetPassword ? "mx-auto max-w-4xl" : "mx-auto max-w-lg"
-        }
-      >
+      <div className={user ? "mx-auto max-w-4xl" : "mx-auto max-w-lg"}>
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#a9cf9f]">
           Your account
         </p>
-        <h1 className="mt-2 text-3xl font-bold">
-          {resetPassword ? "Choose a new password" : "Account & Cloud Saves"}
-        </h1>
+        <h1 className="mt-2 text-3xl font-bold">Account & Cloud Saves</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[#9aa4af]">
           Accounts are optional. Keep playing as a guest, or sign in to move
           your progress between devices.
@@ -349,7 +267,7 @@ export default function AccountPanel({
             Accounts are not configured on this site yet. You can still use all
             trackers as a guest.
           </div>
-        ) : user && !resetPassword ? (
+        ) : user ? (
           <div className="mt-6 space-y-5">
             <section className="rounded-2xl border border-white/10 bg-[#1b222c] p-6">
               <p className="text-xs uppercase tracking-wider text-white/40">
@@ -409,7 +327,7 @@ export default function AccountPanel({
                   className="mt-2 text-xs leading-5 text-white/40"
                 >
                   3–24 letters, numbers, underscores or hyphens. This is a
-                  display name; sign in with Discord or your email address.
+                  display name; sign in with Discord.
                 </p>
                 <button
                   type="submit"
@@ -462,35 +380,6 @@ export default function AccountPanel({
                 >
                   Sign out
                 </button>
-                {user.identities?.some(
-                  (identity) => identity.provider === "email",
-                ) && (
-                  <button
-                    className={buttonClass}
-                    disabled={busy}
-                    onClick={() => {
-                      setMode("forgot");
-                      setEmail(user.email ?? "");
-                      run(async () => {
-                        const { error: authError } =
-                          await getSupabase().auth.resetPasswordForEmail(
-                            user.email ?? "",
-                            {
-                              redirectTo:
-                                window.location.origin +
-                                "/auth/callback?next=/account/reset-password",
-                            },
-                          );
-                        if (authError) throw authError;
-                        setNotice(
-                          "Check your email for a password reset link.",
-                        );
-                      });
-                    }}
-                  >
-                    Reset password
-                  </button>
-                )}
               </div>
             </section>
             <MinecraftProfiles
@@ -576,174 +465,25 @@ export default function AccountPanel({
             </section>
           </div>
         ) : (
-          <section className="mt-6 max-w-lg rounded-2xl border border-white/10 bg-[#1b222c] p-6">
-            {!resetPassword && mode !== "forgot" && (
-              <div className="mb-6">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => discordLogin()}
-                  className="flex w-full items-center justify-center rounded-xl bg-[#5865f2] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#4752c4] disabled:opacity-40"
-                >
-                  Continue with Discord
-                </button>
-                <p className="mt-2 text-center text-xs leading-5 text-white/45">
-                  No separate T5MC password needed.
-                </p>
-                <p className="mt-4 border-t border-white/10 pt-4 text-center text-xs text-white/35">
-                  Or use email
-                </p>
-              </div>
-            )}
-            {!resetPassword && (
-              <div className="mb-6 flex gap-2">
-                {(["login", "signup"] as const).map((value) => (
-                  <button
-                    key={value}
-                    disabled={busy}
-                    className={mode === value ? primaryClass : buttonClass}
-                    onClick={() => {
-                      setMode(value);
-                      setError("");
-                      setNotice("");
-                      setPassword("");
-                      setConfirmPassword("");
-                    }}
-                  >
-                    {value === "login" ? "Log in" : "Create account"}
-                  </button>
-                ))}
-              </div>
-            )}
-            {resetPassword && !user ? (
-              <p className="text-sm leading-6 text-white/65">
-                Open your password reset email link first.{" "}
-                <Link className="text-[#a9cf9f] underline" href="/account">
-                  Return to login
-                </Link>{" "}
-                to request a new link.
-              </p>
-            ) : (
-              <form onSubmit={submit} className="space-y-5">
-                <h2 className="text-xl font-semibold">
-                  {resetPassword
-                    ? "New password"
-                    : mode === "forgot"
-                      ? "Reset your password"
-                      : mode === "signup"
-                        ? "Create your T5MC account"
-                        : "Welcome back"}
-                </h2>
-                {!resetPassword && mode === "signup" && (
-                  <label className="block text-sm text-white/70">
-                    Username
-                    <input
-                      className={inputClass}
-                      autoComplete="nickname"
-                      value={signupUsername}
-                      onChange={(event) =>
-                        setSignupUsername(event.target.value)
-                      }
-                      minLength={3}
-                      maxLength={24}
-                      required
-                      disabled={busy}
-                      spellCheck={false}
-                      autoCapitalize="none"
-                      aria-describedby="signup-username-help"
-                    />
-                    <span
-                      id="signup-username-help"
-                      className="mt-2 block text-xs text-white/40"
-                    >
-                      3–24 letters, numbers, underscores or hyphens.
-                    </span>
-                  </label>
-                )}
-                {!resetPassword && (
-                  <label className="block text-sm text-white/70">
-                    Email address
-                    <input
-                      className={inputClass}
-                      type="email"
-                      autoComplete="email"
-                      required
-                      maxLength={254}
-                      disabled={busy}
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                    />
-                  </label>
-                )}
-                {(resetPassword || mode !== "forgot") && (
-                  <label className="block text-sm text-white/70">
-                    {resetPassword ? "New password" : "Password"}
-                    <input
-                      className={inputClass}
-                      type="password"
-                      autoComplete={
-                        resetPassword || mode === "signup"
-                          ? "new-password"
-                          : "current-password"
-                      }
-                      minLength={resetPassword || mode === "signup" ? 8 : 1}
-                      maxLength={128}
-                      required
-                      disabled={busy}
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                    />
-                  </label>
-                )}
-                {(resetPassword || mode === "signup") && (
-                  <label className="block text-sm text-white/70">
-                    Confirm password
-                    <input
-                      className={inputClass}
-                      type="password"
-                      autoComplete="new-password"
-                      required
-                      minLength={8}
-                      maxLength={128}
-                      disabled={busy}
-                      value={confirmPassword}
-                      onChange={(event) =>
-                        setConfirmPassword(event.target.value)
-                      }
-                    />
-                    <span className="mt-2 block text-xs text-white/40">
-                      Use at least 8 characters.
-                    </span>
-                  </label>
-                )}
-                <button className={primaryClass} type="submit" disabled={busy}>
-                  {busy
-                    ? "Please wait…"
-                    : resetPassword
-                      ? "Update password"
-                      : mode === "forgot"
-                        ? "Send reset link"
-                        : mode === "signup"
-                          ? "Create account"
-                          : "Log in"}
-                </button>
-                {!resetPassword && mode === "login" && (
-                  <button
-                    className="block text-sm text-[#a9cf9f] underline"
-                    type="button"
-                    disabled={busy}
-                    onClick={() => {
-                      setMode("forgot");
-                      setError("");
-                      setNotice("");
-                      setPassword("");
-                    }}
-                  >
-                    Forgot password?
-                  </button>
-                )}
-              </form>
-            )}
+          <section className="mt-6 rounded-2xl border border-white/10 bg-[#1b222c] p-6">
+            <h2 className="text-xl font-semibold">
+              Welcome to T5 Mission Control
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-white/55">
+              Sign in or create your site account with Discord to save your
+              progress and track your Minecraft accounts.
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => discordLogin()}
+              className="mt-5 flex w-full items-center justify-center rounded-xl bg-[#5865f2] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#4752c4] disabled:opacity-40"
+            >
+              {busy ? "Connecting…" : "Continue with Discord"}
+            </button>
+            <p className="mt-3 text-center text-xs text-white/40">
+              No separate T5MC password needed.
+            </p>
           </section>
         )}
         <Link
