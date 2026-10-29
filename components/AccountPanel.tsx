@@ -91,7 +91,7 @@ export default function AccountPanel({
         setBackup(hasRestoreBackup(localStorage));
         if (new URLSearchParams(window.location.search).has("authError")) {
           setError(
-            "That email link is invalid or expired. Request a new link, and open it in the same browser where you started.",
+            "Sign-in could not be completed. Try again in the same browser where you started, or request a fresh password reset link if you were resetting your password.",
           );
         }
         setUser(data.user);
@@ -230,6 +230,25 @@ export default function AccountPanel({
       );
     }
     return data.user;
+  }
+
+  async function discordLogin(connect = false) {
+    await run(async () => {
+      const supabase = getSupabase();
+      if (connect) await verifiedUser();
+      const options = { redirectTo: window.location.origin + "/auth/callback" };
+      const result = connect
+        ? await supabase.auth.linkIdentity({ provider: "discord", options })
+        : await supabase.auth.signInWithOAuth({ provider: "discord", options });
+      if (result.error) {
+        if (result.error.code === "manual_linking_disabled") {
+          throw new Error(
+            "Enable Manual Linking in Supabase authentication settings before connecting Discord to an existing account.",
+          );
+        }
+        throw result.error;
+      }
+    });
   }
 
   async function saveCloud() {
@@ -390,7 +409,7 @@ export default function AccountPanel({
                   className="mt-2 text-xs leading-5 text-white/40"
                 >
                   3–24 letters, numbers, underscores or hyphens. This is a
-                  display name; sign in with your email address.
+                  display name; sign in with Discord or your email address.
                 </p>
                 <button
                   type="submit"
@@ -400,6 +419,32 @@ export default function AccountPanel({
                   Save username
                 </button>
               </form>
+              <div className="mt-5 rounded-xl border border-white/10 bg-black/10 p-4">
+                <p className="text-sm font-semibold">Discord login</p>
+                {user.identities?.some(
+                  (identity) => identity.provider === "discord",
+                ) ? (
+                  <p className="mt-2 text-sm text-[#b9dfaf]">
+                    Discord is connected. You can use it to sign into this same
+                    site account.
+                  </p>
+                ) : (
+                  <>
+                    <p className="mt-2 text-xs leading-5 text-white/50">
+                      Connect Discord while signed in to keep your current cloud
+                      saves, Minecraft profiles and site permissions.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => discordLogin(true)}
+                      className="mt-3 rounded-xl bg-[#5865f2] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#4752c4] disabled:opacity-40"
+                    >
+                      Connect Discord
+                    </button>
+                  </>
+                )}
+              </div>
               <div className="mt-5 flex flex-wrap gap-3">
                 <button
                   className={buttonClass}
@@ -417,29 +462,35 @@ export default function AccountPanel({
                 >
                   Sign out
                 </button>
-                <button
-                  className={buttonClass}
-                  disabled={busy}
-                  onClick={() => {
-                    setMode("forgot");
-                    setEmail(user.email ?? "");
-                    run(async () => {
-                      const { error: authError } =
-                        await getSupabase().auth.resetPasswordForEmail(
-                          user.email ?? "",
-                          {
-                            redirectTo:
-                              window.location.origin +
-                              "/auth/callback?next=/account/reset-password",
-                          },
+                {user.identities?.some(
+                  (identity) => identity.provider === "email",
+                ) && (
+                  <button
+                    className={buttonClass}
+                    disabled={busy}
+                    onClick={() => {
+                      setMode("forgot");
+                      setEmail(user.email ?? "");
+                      run(async () => {
+                        const { error: authError } =
+                          await getSupabase().auth.resetPasswordForEmail(
+                            user.email ?? "",
+                            {
+                              redirectTo:
+                                window.location.origin +
+                                "/auth/callback?next=/account/reset-password",
+                            },
+                          );
+                        if (authError) throw authError;
+                        setNotice(
+                          "Check your email for a password reset link.",
                         );
-                      if (authError) throw authError;
-                      setNotice("Check your email for a password reset link.");
-                    });
-                  }}
-                >
-                  Reset password
-                </button>
+                      });
+                    }}
+                  >
+                    Reset password
+                  </button>
+                )}
               </div>
             </section>
             <MinecraftProfiles
@@ -526,6 +577,24 @@ export default function AccountPanel({
           </div>
         ) : (
           <section className="mt-6 max-w-lg rounded-2xl border border-white/10 bg-[#1b222c] p-6">
+            {!resetPassword && mode !== "forgot" && (
+              <div className="mb-6">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => discordLogin()}
+                  className="flex w-full items-center justify-center rounded-xl bg-[#5865f2] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#4752c4] disabled:opacity-40"
+                >
+                  Continue with Discord
+                </button>
+                <p className="mt-2 text-center text-xs leading-5 text-white/45">
+                  No separate T5MC password needed.
+                </p>
+                <p className="mt-4 border-t border-white/10 pt-4 text-center text-xs text-white/35">
+                  Or use email
+                </p>
+              </div>
+            )}
             {!resetPassword && (
               <div className="mb-6 flex gap-2">
                 {(["login", "signup"] as const).map((value) => (
