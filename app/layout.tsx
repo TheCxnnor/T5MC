@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+import CloudAutoSave from "../components/CloudAutoSave";
+import SidebarAccount from "../components/SidebarAccount";
 
 export const metadata: Metadata = {
   title: "T5 Mission Control",
@@ -71,55 +73,67 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-[#151b24] text-white">
-        {/* Desktop sidebar */}
-        <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-white/10 bg-[#1b222c] md:flex">
-          <Link
-            href="/"
-            className="block shrink-0 border-b border-white/10 px-6 py-7"
-          >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#a9cf9f]">
-              T5
-            </p>
+        <CloudAutoSave>
+          {/* Desktop sidebar */}
+          <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-white/10 bg-[#1b222c] md:flex">
+            <Link
+              href="/"
+              className="block shrink-0 border-b border-white/10 px-6 py-7"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#a9cf9f]">
+                T5
+              </p>
 
-            <p className="mt-1 text-xl font-bold tracking-tight">
-              Mission Control
-            </p>
-          </Link>
-
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
-            <Navigation />
-          </div>
-
-          <div className="shrink-0 border-t border-white/10 px-6 py-4">
-            <p className="text-xs text-[#788595]">
-              Plan upgrades. Track progress.
-            </p>
-          </div>
-        </aside>
-
-        {/* Mobile navigation */}
-        <header className="sticky top-0 z-40 border-b border-white/10 bg-[#1b222c] md:hidden">
-          <div className="px-4 py-4">
-            <Link href="/" className="text-lg font-bold">
-              T5 Mission Control
+              <p className="mt-1 text-xl font-bold tracking-tight">
+                Mission Control
+              </p>
             </Link>
-          </div>
 
-          <details className="border-t border-white/5">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#a9cf9f]">
-              Navigation
-            </summary>
-
-            <div className="max-h-[65vh] overflow-y-auto px-4 pb-5 pt-2">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
               <Navigation />
             </div>
-          </details>
-        </header>
 
-        {/* Page content */}
-        <div className="min-w-0 md:ml-64">{children}</div>
+            <div className="shrink-0 border-t border-white/10 px-6 py-4">
+              <p className="text-xs text-[#788595]">
+                Plan upgrades. Track progress.
+              </p>
+            </div>
+          </aside>
 
-        <Analytics />
+          {/* Mobile navigation */}
+          <header className="sticky top-0 z-40 border-b border-white/10 bg-[#1b222c] md:hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <Link
+                href="/"
+                className="min-w-0 truncate text-base font-bold sm:text-lg"
+              >
+                T5 Mission Control
+              </Link>
+              <SidebarAccount />
+            </div>
+            <details className="border-t border-white/5">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[#a9cf9f]">
+                Navigation
+              </summary>
+
+              <div className="max-h-[65vh] overflow-y-auto px-4 pb-5 pt-2">
+                <Navigation />
+              </div>
+            </details>
+          </header>
+
+          {/* Page content */}
+          <div className="min-h-screen min-w-0 bg-[#151b24] md:ml-64">
+            <div className="hidden h-14 md:block">
+              <div className="fixed right-6 top-2 z-50 lg:right-8">
+                <SidebarAccount />
+              </div>
+            </div>
+            {children}
+          </div>
+
+          <Analytics />
+        </CloudAutoSave>
       </body>
     </html>
   );
