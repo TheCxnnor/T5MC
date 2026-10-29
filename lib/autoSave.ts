@@ -10,6 +10,7 @@ export type Binding = { userId: string; version: number; fingerprint: string };
 export type SyncPhase =
   | "guest"
   | "checking"
+  | "loading"
   | "choose"
   | "saved"
   | "pending"
@@ -24,6 +25,8 @@ export type SyncState = {
 export type AutoSavePorts = {
   capture(): ProgressSnapshot;
   binding(): Binding | null;
+  restore(snapshot: ProgressSnapshot): void;
+  reload(): void;
   store(binding: Binding | null): void;
   read(userId: string): Promise<CloudRecord | null>;
   write(
@@ -63,7 +66,10 @@ export class AutoSave {
     this.lastStatus = signature;
     this.ports.notify({ phase, message, receipt: this.receipt });
   }
-  async initialize(userId: string | null) {
+  async initialize(
+    userId: string | null,
+    options: { signIn?: boolean; pauseRestore?: boolean } = {},
+  ) {
     this.userId = userId;
     this.linked = false;
     this.receipt = null;
@@ -85,9 +91,22 @@ export class AutoSave {
     try {
       const remote = await this.ports.read(userId);
       if (this.stopped || generation !== this.generation) return;
-      const local = fingerprint(this.ports.capture());
       const binding = this.ports.binding();
       this.receipt = remote;
+      if (
+        remote &&
+        (options.signIn ||
+          (!options.pauseRestore && binding?.userId !== userId))
+      ) {
+        this.status("loading", "Loading your cloud progress…");
+        // Back up and restore before capturing: the previous browser data may
+        // belong to a different site account.
+        this.ports.restore(remote.progress);
+        this.link(remote, remote.progress);
+        this.ports.reload();
+        return;
+      }
+      const local = fingerprint(this.ports.capture());
       if (remote && fingerprint(remote.progress) === local) {
         this.link(remote, remote.progress);
       } else if (
@@ -108,7 +127,9 @@ export class AutoSave {
       } else {
         this.status(
           "choose",
-          "Choose browser or cloud progress to start auto-save",
+          remote
+            ? "Cloud save changed. Choose which progress to keep."
+            : "No cloud save yet. Import browser progress to start auto-save.",
         );
       }
     } catch {

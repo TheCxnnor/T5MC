@@ -160,11 +160,13 @@ export default function AccountPanel() {
     await run(async () => {
       const supabase = getSupabase();
       if (connect) await verifiedUser();
+      if (!connect) sessionStorage.setItem("t5-cloud-load-on-signin", "1");
       const options = { redirectTo: window.location.origin + "/auth/callback" };
       const result = connect
         ? await supabase.auth.linkIdentity({ provider: "discord", options })
         : await supabase.auth.signInWithOAuth({ provider: "discord", options });
       if (result.error) {
+        if (!connect) sessionStorage.removeItem("t5-cloud-load-on-signin");
         if (result.error.code === "manual_linking_disabled") {
           throw new Error(
             "Enable Manual Linking in Supabase authentication settings before connecting Discord to an existing account.",
@@ -352,12 +354,13 @@ export default function AccountPanel() {
               </p>
               <p className="mt-3 text-sm leading-6 text-white/50">
                 Includes all progression, calculator settings and recommendation
-                preferences for all your Minecraft accounts. After choosing your
-                browser or cloud save, changes save automatically a few seconds
+                preferences for all your Minecraft accounts. Signing in
+                automatically loads your cloud save and replaces this browser’s
+                tracker progress. A browser backup is kept so you can undo the
+                load. If there is no cloud save yet, your browser progress is
+                kept for import. Changes then save automatically a few seconds
                 after you stop editing. Wait for “Saved to cloud” before closing
-                the site. On another device, use Load cloud save to restore your
-                latest progress. Signing in or out does not replace this
-                browser’s progress.
+                the site. Signing out does not erase browser progress.
               </p>
               <div className="mt-5 flex flex-wrap gap-3">
                 <button
@@ -423,8 +426,10 @@ export default function AccountPanel() {
               Welcome to T5 Mission Control
             </h2>
             <p className="mt-3 text-sm leading-6 text-white/55">
-              Sign in or create your site account with Discord to save your
-              progress and track your Minecraft accounts.
+              Sign in with Discord to load your cloud-saved progress
+              automatically and track your Minecraft accounts. Existing cloud
+              progress replaces this browser’s tracker data, with a local backup
+              kept for undo.
             </p>
             <button
               type="button"

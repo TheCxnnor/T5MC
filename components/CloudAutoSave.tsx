@@ -17,6 +17,7 @@ import {
 } from "../lib/autoSave";
 import {
   captureProgress,
+  restoreProgress,
   assertSnapshotOwner,
   PROFILE_KEY,
   readProfileDirectory,
@@ -26,6 +27,8 @@ import { readCloud, writeCloud } from "../lib/cloudApi";
 import { accountConfigured, getSupabase } from "../lib/supabase/client";
 
 const KEY = "t5-cloud-auto-save-binding";
+const PAUSE_RESTORE_KEY = "t5-cloud-auto-load-paused";
+const SIGNIN_KEY = "t5-cloud-load-on-signin";
 type SyncContext = SyncState & {
   pause(): Promise<void>;
   resume(): void;
@@ -55,6 +58,8 @@ export default function CloudAutoSave({ children }: { children: ReactNode }) {
         if (ownerRef.current) assertSnapshotOwner(snapshot, ownerRef.current);
         return snapshot;
       },
+      restore: (snapshot) => restoreProgress(localStorage, snapshot),
+      reload: () => window.location.reload(),
       binding: () => {
         try {
           const value = JSON.parse(
@@ -73,6 +78,8 @@ export default function CloudAutoSave({ children }: { children: ReactNode }) {
       store: (binding) => {
         if (binding) localStorage.setItem(KEY, JSON.stringify(binding));
         else localStorage.removeItem(KEY);
+        localStorage.removeItem(PAUSE_RESTORE_KEY);
+        sessionStorage.removeItem(SIGNIN_KEY);
       },
       read: readCloud,
       write: writeCloud,
@@ -83,6 +90,17 @@ export default function CloudAutoSave({ children }: { children: ReactNode }) {
       online: () => navigator.onLine,
     });
     engineRef.current = engine;
+    const initialize = (id: string | null) => {
+      let signIn = false,
+        pauseRestore = false;
+      try {
+        signIn = sessionStorage.getItem(SIGNIN_KEY) === "1";
+        pauseRestore = localStorage.getItem(PAUSE_RESTORE_KEY) === id;
+      } catch {
+        /* A missing marker still permits a first-login cloud restore. */
+      }
+      return engine.initialize(id, { signIn, pauseRestore });
+    };
     const supabase = getSupabase();
     let initialized = false;
     const changeOwner = (id: string | null) => {
@@ -91,7 +109,7 @@ export default function CloudAutoSave({ children }: { children: ReactNode }) {
       ownerRef.current = id;
       // Never call another auth method inside onAuthStateChange's auth lock.
       queueMicrotask(() => {
-        if (active && ownerRef.current === id) void engine.initialize(id);
+        if (active && ownerRef.current === id) void initialize(id);
       });
     };
     const {
@@ -103,7 +121,7 @@ export default function CloudAutoSave({ children }: { children: ReactNode }) {
       void engine.tick();
     }, 750);
     const retry = () => {
-      if (active) void engine.initialize(ownerRef.current);
+      if (active) void initialize(ownerRef.current);
     };
     const marker = () => {
       try {
@@ -139,7 +157,11 @@ export default function CloudAutoSave({ children }: { children: ReactNode }) {
     };
   }, []);
   const retry = () => {
-    void engineRef.current?.initialize(ownerRef.current);
+    const id = ownerRef.current;
+    void engineRef.current?.initialize(id, {
+      signIn: sessionStorage.getItem(SIGNIN_KEY) === "1",
+      pauseRestore: localStorage.getItem(PAUSE_RESTORE_KEY) === id,
+    });
   };
   return (
     <Context.Provider
@@ -150,7 +172,13 @@ export default function CloudAutoSave({ children }: { children: ReactNode }) {
         },
         resume: () => engineRef.current?.resume(),
         link: (receipt, snapshot) => engineRef.current?.link(receipt, snapshot),
-        unlink: () => engineRef.current?.unlink(),
+        unlink: () => {
+          // Undo/start-fresh are deliberate local choices. Do not auto-restore
+          // over them on the following page reload.
+          const owner = ownerRef.current;
+          engineRef.current?.unlink();
+          if (owner) localStorage.setItem(PAUSE_RESTORE_KEY, owner);
+        },
       }}
     >
       {children}
